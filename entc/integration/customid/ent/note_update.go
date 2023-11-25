@@ -120,7 +120,7 @@ func (nu *NoteUpdate) RemoveChildren(n ...*Note) *NoteUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (nu *NoteUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, NoteMutation](ctx, nu.sqlSave, nu.mutation, nu.hooks)
+	return withHooks(ctx, nu.sqlSave, nu.mutation, nu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -146,16 +146,7 @@ func (nu *NoteUpdate) ExecX(ctx context.Context) {
 }
 
 func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   note.Table,
-			Columns: note.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: note.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(note.Table, note.Columns, sqlgraph.NewFieldSpec(note.FieldID, field.TypeString))
 	if ps := nu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -177,10 +168,7 @@ func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{note.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -193,10 +181,7 @@ func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{note.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -212,10 +197,7 @@ func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -228,10 +210,7 @@ func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -247,10 +226,7 @@ func (nu *NoteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -364,6 +340,12 @@ func (nuo *NoteUpdateOne) RemoveChildren(n ...*Note) *NoteUpdateOne {
 	return nuo.RemoveChildIDs(ids...)
 }
 
+// Where appends a list predicates to the NoteUpdate builder.
+func (nuo *NoteUpdateOne) Where(ps ...predicate.Note) *NoteUpdateOne {
+	nuo.mutation.Where(ps...)
+	return nuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (nuo *NoteUpdateOne) Select(field string, fields ...string) *NoteUpdateOne {
@@ -373,7 +355,7 @@ func (nuo *NoteUpdateOne) Select(field string, fields ...string) *NoteUpdateOne 
 
 // Save executes the query and returns the updated Note entity.
 func (nuo *NoteUpdateOne) Save(ctx context.Context) (*Note, error) {
-	return withHooks[*Note, NoteMutation](ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
+	return withHooks(ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -399,16 +381,7 @@ func (nuo *NoteUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   note.Table,
-			Columns: note.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: note.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(note.Table, note.Columns, sqlgraph.NewFieldSpec(note.FieldID, field.TypeString))
 	id, ok := nuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Note.id" for update`)}
@@ -447,10 +420,7 @@ func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) 
 			Columns: []string{note.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -463,10 +433,7 @@ func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) 
 			Columns: []string{note.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -482,10 +449,7 @@ func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) 
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -498,10 +462,7 @@ func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) 
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -517,10 +478,7 @@ func (nuo *NoteUpdateOne) sqlSave(ctx context.Context) (_node *Note, err error) 
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

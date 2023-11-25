@@ -29,7 +29,7 @@ func (gc *GoodsCreate) Mutation() *GoodsMutation {
 
 // Save creates the Goods in the database.
 func (gc *GoodsCreate) Save(ctx context.Context) (*Goods, error) {
-	return withHooks[*Goods, GoodsMutation](ctx, gc.gremlinSave, gc.mutation, gc.hooks)
+	return withHooks(ctx, gc.gremlinSave, gc.mutation, gc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -71,13 +71,13 @@ func (gc *GoodsCreate) gremlinSave(ctx context.Context) (*Goods, error) {
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	_go := &Goods{config: gc.config}
-	if err := _go.FromResponse(res); err != nil {
+	rnode := &Goods{config: gc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	gc.mutation.id = &_go.ID
+	gc.mutation.id = &rnode.ID
 	gc.mutation.done = true
-	return _go, nil
+	return rnode, nil
 }
 
 func (gc *GoodsCreate) gremlin() *dsl.Traversal {
@@ -88,5 +88,6 @@ func (gc *GoodsCreate) gremlin() *dsl.Traversal {
 // GoodsCreateBulk is the builder for creating many Goods entities in bulk.
 type GoodsCreateBulk struct {
 	config
+	err      error
 	builders []*GoodsCreate
 }

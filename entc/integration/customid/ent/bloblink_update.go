@@ -54,9 +54,25 @@ func (blu *BlobLinkUpdate) SetBlobID(u uuid.UUID) *BlobLinkUpdate {
 	return blu
 }
 
+// SetNillableBlobID sets the "blob_id" field if the given value is not nil.
+func (blu *BlobLinkUpdate) SetNillableBlobID(u *uuid.UUID) *BlobLinkUpdate {
+	if u != nil {
+		blu.SetBlobID(*u)
+	}
+	return blu
+}
+
 // SetLinkID sets the "link_id" field.
 func (blu *BlobLinkUpdate) SetLinkID(u uuid.UUID) *BlobLinkUpdate {
 	blu.mutation.SetLinkID(u)
+	return blu
+}
+
+// SetNillableLinkID sets the "link_id" field if the given value is not nil.
+func (blu *BlobLinkUpdate) SetNillableLinkID(u *uuid.UUID) *BlobLinkUpdate {
+	if u != nil {
+		blu.SetLinkID(*u)
+	}
 	return blu
 }
 
@@ -89,7 +105,7 @@ func (blu *BlobLinkUpdate) ClearLink() *BlobLinkUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (blu *BlobLinkUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, BlobLinkMutation](ctx, blu.sqlSave, blu.mutation, blu.hooks)
+	return withHooks(ctx, blu.sqlSave, blu.mutation, blu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -129,22 +145,7 @@ func (blu *BlobLinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := blu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   bloblink.Table,
-			Columns: bloblink.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeUUID,
-					Column: bloblink.FieldBlobID,
-				},
-				{
-					Type:   field.TypeUUID,
-					Column: bloblink.FieldLinkID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(bloblink.Table, bloblink.Columns, sqlgraph.NewFieldSpec(bloblink.FieldBlobID, field.TypeUUID), sqlgraph.NewFieldSpec(bloblink.FieldLinkID, field.TypeUUID))
 	if ps := blu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -163,10 +164,7 @@ func (blu *BlobLinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{bloblink.BlobColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -179,10 +177,7 @@ func (blu *BlobLinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{bloblink.BlobColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -198,10 +193,7 @@ func (blu *BlobLinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{bloblink.LinkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -214,10 +206,7 @@ func (blu *BlobLinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{bloblink.LinkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -265,9 +254,25 @@ func (bluo *BlobLinkUpdateOne) SetBlobID(u uuid.UUID) *BlobLinkUpdateOne {
 	return bluo
 }
 
+// SetNillableBlobID sets the "blob_id" field if the given value is not nil.
+func (bluo *BlobLinkUpdateOne) SetNillableBlobID(u *uuid.UUID) *BlobLinkUpdateOne {
+	if u != nil {
+		bluo.SetBlobID(*u)
+	}
+	return bluo
+}
+
 // SetLinkID sets the "link_id" field.
 func (bluo *BlobLinkUpdateOne) SetLinkID(u uuid.UUID) *BlobLinkUpdateOne {
 	bluo.mutation.SetLinkID(u)
+	return bluo
+}
+
+// SetNillableLinkID sets the "link_id" field if the given value is not nil.
+func (bluo *BlobLinkUpdateOne) SetNillableLinkID(u *uuid.UUID) *BlobLinkUpdateOne {
+	if u != nil {
+		bluo.SetLinkID(*u)
+	}
 	return bluo
 }
 
@@ -298,6 +303,12 @@ func (bluo *BlobLinkUpdateOne) ClearLink() *BlobLinkUpdateOne {
 	return bluo
 }
 
+// Where appends a list predicates to the BlobLinkUpdate builder.
+func (bluo *BlobLinkUpdateOne) Where(ps ...predicate.BlobLink) *BlobLinkUpdateOne {
+	bluo.mutation.Where(ps...)
+	return bluo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (bluo *BlobLinkUpdateOne) Select(field string, fields ...string) *BlobLinkUpdateOne {
@@ -307,7 +318,7 @@ func (bluo *BlobLinkUpdateOne) Select(field string, fields ...string) *BlobLinkU
 
 // Save executes the query and returns the updated BlobLink entity.
 func (bluo *BlobLinkUpdateOne) Save(ctx context.Context) (*BlobLink, error) {
-	return withHooks[*BlobLink, BlobLinkMutation](ctx, bluo.sqlSave, bluo.mutation, bluo.hooks)
+	return withHooks(ctx, bluo.sqlSave, bluo.mutation, bluo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -347,22 +358,7 @@ func (bluo *BlobLinkUpdateOne) sqlSave(ctx context.Context) (_node *BlobLink, er
 	if err := bluo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   bloblink.Table,
-			Columns: bloblink.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeUUID,
-					Column: bloblink.FieldBlobID,
-				},
-				{
-					Type:   field.TypeUUID,
-					Column: bloblink.FieldLinkID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(bloblink.Table, bloblink.Columns, sqlgraph.NewFieldSpec(bloblink.FieldBlobID, field.TypeUUID), sqlgraph.NewFieldSpec(bloblink.FieldLinkID, field.TypeUUID))
 	if id, ok := bluo.mutation.BlobID(); !ok {
 		return nil, &ValidationError{Name: "blob_id", err: errors.New(`ent: missing "BlobLink.blob_id" for update`)}
 	} else {
@@ -400,10 +396,7 @@ func (bluo *BlobLinkUpdateOne) sqlSave(ctx context.Context) (_node *BlobLink, er
 			Columns: []string{bloblink.BlobColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -416,10 +409,7 @@ func (bluo *BlobLinkUpdateOne) sqlSave(ctx context.Context) (_node *BlobLink, er
 			Columns: []string{bloblink.BlobColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -435,10 +425,7 @@ func (bluo *BlobLinkUpdateOne) sqlSave(ctx context.Context) (_node *BlobLink, er
 			Columns: []string{bloblink.LinkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -451,10 +438,7 @@ func (bluo *BlobLinkUpdateOne) sqlSave(ctx context.Context) (_node *BlobLink, er
 			Columns: []string{bloblink.LinkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -67,6 +67,14 @@ func (uu *UserUpdate) SetAge(i int) *UserUpdate {
 	return uu
 }
 
+// SetNillableAge sets the "age" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableAge(i *int) *UserUpdate {
+	if i != nil {
+		uu.SetAge(*i)
+	}
+	return uu
+}
+
 // AddAge adds i to the "age" field.
 func (uu *UserUpdate) AddAge(i int) *UserUpdate {
 	uu.mutation.AddAge(i)
@@ -76,6 +84,14 @@ func (uu *UserUpdate) AddAge(i int) *UserUpdate {
 // SetName sets the "name" field.
 func (uu *UserUpdate) SetName(s string) *UserUpdate {
 	uu.mutation.SetName(s)
+	return uu
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableName(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetName(*s)
+	}
 	return uu
 }
 
@@ -218,6 +234,33 @@ func (uu *UserUpdate) SetNillableSSOCert(s *string) *UserUpdate {
 // ClearSSOCert clears the value of the "SSOCert" field.
 func (uu *UserUpdate) ClearSSOCert() *UserUpdate {
 	uu.mutation.ClearSSOCert()
+	return uu
+}
+
+// SetFilesCount sets the "files_count" field.
+func (uu *UserUpdate) SetFilesCount(i int) *UserUpdate {
+	uu.mutation.ResetFilesCount()
+	uu.mutation.SetFilesCount(i)
+	return uu
+}
+
+// SetNillableFilesCount sets the "files_count" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableFilesCount(i *int) *UserUpdate {
+	if i != nil {
+		uu.SetFilesCount(*i)
+	}
+	return uu
+}
+
+// AddFilesCount adds i to the "files_count" field.
+func (uu *UserUpdate) AddFilesCount(i int) *UserUpdate {
+	uu.mutation.AddFilesCount(i)
+	return uu
+}
+
+// ClearFilesCount clears the value of the "files_count" field.
+func (uu *UserUpdate) ClearFilesCount() *UserUpdate {
+	uu.mutation.ClearFilesCount()
 	return uu
 }
 
@@ -580,7 +623,7 @@ func (uu *UserUpdate) ClearParent() *UserUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, UserMutation](ctx, uu.gremlinSave, uu.mutation, uu.hooks)
+	return withHooks(ctx, uu.gremlinSave, uu.mutation, uu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -704,6 +747,12 @@ func (uu *UserUpdate) gremlin() *dsl.Traversal {
 	if value, ok := uu.mutation.SSOCert(); ok {
 		v.Property(dsl.Single, user.FieldSSOCert, value)
 	}
+	if value, ok := uu.mutation.FilesCount(); ok {
+		v.Property(dsl.Single, user.FieldFilesCount, value)
+	}
+	if value, ok := uu.mutation.AddedFilesCount(); ok {
+		v.Property(dsl.Single, user.FieldFilesCount, __.Union(__.Values(user.FieldFilesCount), __.Constant(value)).Sum())
+	}
 	var properties []any
 	if uu.mutation.OptionalIntCleared() {
 		properties = append(properties, user.FieldOptionalInt)
@@ -722,6 +771,9 @@ func (uu *UserUpdate) gremlin() *dsl.Traversal {
 	}
 	if uu.mutation.SSOCertCleared() {
 		properties = append(properties, user.FieldSSOCert)
+	}
+	if uu.mutation.FilesCountCleared() {
+		properties = append(properties, user.FieldFilesCount)
 	}
 	if len(properties) > 0 {
 		v.SideEffect(__.Properties(properties...).Drop())
@@ -888,6 +940,14 @@ func (uuo *UserUpdateOne) SetAge(i int) *UserUpdateOne {
 	return uuo
 }
 
+// SetNillableAge sets the "age" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableAge(i *int) *UserUpdateOne {
+	if i != nil {
+		uuo.SetAge(*i)
+	}
+	return uuo
+}
+
 // AddAge adds i to the "age" field.
 func (uuo *UserUpdateOne) AddAge(i int) *UserUpdateOne {
 	uuo.mutation.AddAge(i)
@@ -897,6 +957,14 @@ func (uuo *UserUpdateOne) AddAge(i int) *UserUpdateOne {
 // SetName sets the "name" field.
 func (uuo *UserUpdateOne) SetName(s string) *UserUpdateOne {
 	uuo.mutation.SetName(s)
+	return uuo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableName(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetName(*s)
+	}
 	return uuo
 }
 
@@ -1039,6 +1107,33 @@ func (uuo *UserUpdateOne) SetNillableSSOCert(s *string) *UserUpdateOne {
 // ClearSSOCert clears the value of the "SSOCert" field.
 func (uuo *UserUpdateOne) ClearSSOCert() *UserUpdateOne {
 	uuo.mutation.ClearSSOCert()
+	return uuo
+}
+
+// SetFilesCount sets the "files_count" field.
+func (uuo *UserUpdateOne) SetFilesCount(i int) *UserUpdateOne {
+	uuo.mutation.ResetFilesCount()
+	uuo.mutation.SetFilesCount(i)
+	return uuo
+}
+
+// SetNillableFilesCount sets the "files_count" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableFilesCount(i *int) *UserUpdateOne {
+	if i != nil {
+		uuo.SetFilesCount(*i)
+	}
+	return uuo
+}
+
+// AddFilesCount adds i to the "files_count" field.
+func (uuo *UserUpdateOne) AddFilesCount(i int) *UserUpdateOne {
+	uuo.mutation.AddFilesCount(i)
+	return uuo
+}
+
+// ClearFilesCount clears the value of the "files_count" field.
+func (uuo *UserUpdateOne) ClearFilesCount() *UserUpdateOne {
+	uuo.mutation.ClearFilesCount()
 	return uuo
 }
 
@@ -1399,6 +1494,12 @@ func (uuo *UserUpdateOne) ClearParent() *UserUpdateOne {
 	return uuo
 }
 
+// Where appends a list predicates to the UserUpdate builder.
+func (uuo *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
+	uuo.mutation.Where(ps...)
+	return uuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (uuo *UserUpdateOne) Select(field string, fields ...string) *UserUpdateOne {
@@ -1408,7 +1509,7 @@ func (uuo *UserUpdateOne) Select(field string, fields ...string) *UserUpdateOne 
 
 // Save executes the query and returns the updated User entity.
 func (uuo *UserUpdateOne) Save(ctx context.Context) (*User, error) {
-	return withHooks[*User, UserMutation](ctx, uuo.gremlinSave, uuo.mutation, uuo.hooks)
+	return withHooks(ctx, uuo.gremlinSave, uuo.mutation, uuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -1537,6 +1638,12 @@ func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
 	if value, ok := uuo.mutation.SSOCert(); ok {
 		v.Property(dsl.Single, user.FieldSSOCert, value)
 	}
+	if value, ok := uuo.mutation.FilesCount(); ok {
+		v.Property(dsl.Single, user.FieldFilesCount, value)
+	}
+	if value, ok := uuo.mutation.AddedFilesCount(); ok {
+		v.Property(dsl.Single, user.FieldFilesCount, __.Union(__.Values(user.FieldFilesCount), __.Constant(value)).Sum())
+	}
 	var properties []any
 	if uuo.mutation.OptionalIntCleared() {
 		properties = append(properties, user.FieldOptionalInt)
@@ -1555,6 +1662,9 @@ func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
 	}
 	if uuo.mutation.SSOCertCleared() {
 		properties = append(properties, user.FieldSSOCert)
+	}
+	if uuo.mutation.FilesCountCleared() {
+		properties = append(properties, user.FieldFilesCount)
 	}
 	if len(properties) > 0 {
 		v.SideEffect(__.Properties(properties...).Drop())

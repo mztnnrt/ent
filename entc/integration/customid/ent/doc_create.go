@@ -112,7 +112,7 @@ func (dc *DocCreate) Mutation() *DocMutation {
 // Save creates the Doc in the database.
 func (dc *DocCreate) Save(ctx context.Context) (*Doc, error) {
 	dc.defaults()
-	return withHooks[*Doc, DocMutation](ctx, dc.sqlSave, dc.mutation, dc.hooks)
+	return withHooks(ctx, dc.sqlSave, dc.mutation, dc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -181,13 +181,7 @@ func (dc *DocCreate) sqlSave(ctx context.Context) (*Doc, error) {
 func (dc *DocCreate) createSpec() (*Doc, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Doc{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: doc.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: doc.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(doc.Table, sqlgraph.NewFieldSpec(doc.FieldID, field.TypeString))
 	)
 	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
@@ -206,10 +200,7 @@ func (dc *DocCreate) createSpec() (*Doc, *sqlgraph.CreateSpec) {
 			Columns: []string{doc.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: doc.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(doc.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -226,10 +217,7 @@ func (dc *DocCreate) createSpec() (*Doc, *sqlgraph.CreateSpec) {
 			Columns: []string{doc.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: doc.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(doc.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -245,10 +233,7 @@ func (dc *DocCreate) createSpec() (*Doc, *sqlgraph.CreateSpec) {
 			Columns: doc.RelatedPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: doc.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(doc.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -436,12 +421,16 @@ func (u *DocUpsertOne) IDX(ctx context.Context) schema.DocID {
 // DocCreateBulk is the builder for creating many Doc entities in bulk.
 type DocCreateBulk struct {
 	config
+	err      error
 	builders []*DocCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Doc entities in the database.
 func (dcb *DocCreateBulk) Save(ctx context.Context) ([]*Doc, error) {
+	if dcb.err != nil {
+		return nil, dcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(dcb.builders))
 	nodes := make([]*Doc, len(dcb.builders))
 	mutators := make([]Mutator, len(dcb.builders))
@@ -458,8 +447,8 @@ func (dcb *DocCreateBulk) Save(ctx context.Context) ([]*Doc, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, dcb.builders[i+1].mutation)
 				} else {
@@ -629,6 +618,9 @@ func (u *DocUpsertBulk) ClearText() *DocUpsertBulk {
 
 // Exec executes the query.
 func (u *DocUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DocCreateBulk instead", i)

@@ -59,7 +59,7 @@ func (iu *ItemUpdate) Mutation() *ItemMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (iu *ItemUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, ItemMutation](ctx, iu.sqlSave, iu.mutation, iu.hooks)
+	return withHooks(ctx, iu.sqlSave, iu.mutation, iu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -104,16 +104,7 @@ func (iu *ItemUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := iu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   item.Table,
-			Columns: item.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: item.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(item.Table, item.Columns, sqlgraph.NewFieldSpec(item.FieldID, field.TypeString))
 	if ps := iu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -174,6 +165,12 @@ func (iuo *ItemUpdateOne) Mutation() *ItemMutation {
 	return iuo.mutation
 }
 
+// Where appends a list predicates to the ItemUpdate builder.
+func (iuo *ItemUpdateOne) Where(ps ...predicate.Item) *ItemUpdateOne {
+	iuo.mutation.Where(ps...)
+	return iuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (iuo *ItemUpdateOne) Select(field string, fields ...string) *ItemUpdateOne {
@@ -183,7 +180,7 @@ func (iuo *ItemUpdateOne) Select(field string, fields ...string) *ItemUpdateOne 
 
 // Save executes the query and returns the updated Item entity.
 func (iuo *ItemUpdateOne) Save(ctx context.Context) (*Item, error) {
-	return withHooks[*Item, ItemMutation](ctx, iuo.sqlSave, iuo.mutation, iuo.hooks)
+	return withHooks(ctx, iuo.sqlSave, iuo.mutation, iuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -228,16 +225,7 @@ func (iuo *ItemUpdateOne) sqlSave(ctx context.Context) (_node *Item, err error) 
 	if err := iuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   item.Table,
-			Columns: item.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: item.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(item.Table, item.Columns, sqlgraph.NewFieldSpec(item.FieldID, field.TypeString))
 	id, ok := iuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Item.id" for update`)}

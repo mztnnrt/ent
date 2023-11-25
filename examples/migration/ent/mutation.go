@@ -12,14 +12,13 @@ import (
 	"fmt"
 	"sync"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/examples/migration/ent/card"
 	"entgo.io/ent/examples/migration/ent/pet"
 	"entgo.io/ent/examples/migration/ent/predicate"
 	"entgo.io/ent/examples/migration/ent/user"
 	"github.com/google/uuid"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -187,6 +186,7 @@ func (m *CardMutation) ResetOwnerID() {
 // ClearOwner clears the "owner" edge to the User entity.
 func (m *CardMutation) ClearOwner() {
 	m.clearedowner = true
+	m.clearedFields[card.FieldOwnerID] = struct{}{}
 }
 
 // OwnerCleared reports if the "owner" edge to the User entity was cleared.
@@ -613,6 +613,7 @@ func (m *PetMutation) ResetOwnerID() {
 // ClearBestFriend clears the "best_friend" edge to the Pet entity.
 func (m *PetMutation) ClearBestFriend() {
 	m.clearedbest_friend = true
+	m.clearedFields[pet.FieldBestFriendID] = struct{}{}
 }
 
 // BestFriendCleared reports if the "best_friend" edge to the Pet entity was cleared.
@@ -639,6 +640,7 @@ func (m *PetMutation) ResetBestFriend() {
 // ClearOwner clears the "owner" edge to the User entity.
 func (m *PetMutation) ClearOwner() {
 	m.clearedowner = true
+	m.clearedFields[pet.FieldOwnerID] = struct{}{}
 }
 
 // OwnerCleared reports if the "owner" edge to the User entity was cleared.

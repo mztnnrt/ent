@@ -39,9 +39,25 @@ func (cu *CardUpdate) SetExpired(t time.Time) *CardUpdate {
 	return cu
 }
 
+// SetNillableExpired sets the "expired" field if the given value is not nil.
+func (cu *CardUpdate) SetNillableExpired(t *time.Time) *CardUpdate {
+	if t != nil {
+		cu.SetExpired(*t)
+	}
+	return cu
+}
+
 // SetNumber sets the "number" field.
 func (cu *CardUpdate) SetNumber(s string) *CardUpdate {
 	cu.mutation.SetNumber(s)
+	return cu
+}
+
+// SetNillableNumber sets the "number" field if the given value is not nil.
+func (cu *CardUpdate) SetNillableNumber(s *string) *CardUpdate {
+	if s != nil {
+		cu.SetNumber(*s)
+	}
 	return cu
 }
 
@@ -69,7 +85,7 @@ func (cu *CardUpdate) ClearOwner() *CardUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CardUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CardMutation](ctx, cu.sqlSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -106,16 +122,7 @@ func (cu *CardUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := cu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   card.Table,
-			Columns: card.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: card.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(card.Table, card.Columns, sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -137,10 +144,7 @@ func (cu *CardUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{card.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -153,10 +157,7 @@ func (cu *CardUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{card.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -190,9 +191,25 @@ func (cuo *CardUpdateOne) SetExpired(t time.Time) *CardUpdateOne {
 	return cuo
 }
 
+// SetNillableExpired sets the "expired" field if the given value is not nil.
+func (cuo *CardUpdateOne) SetNillableExpired(t *time.Time) *CardUpdateOne {
+	if t != nil {
+		cuo.SetExpired(*t)
+	}
+	return cuo
+}
+
 // SetNumber sets the "number" field.
 func (cuo *CardUpdateOne) SetNumber(s string) *CardUpdateOne {
 	cuo.mutation.SetNumber(s)
+	return cuo
+}
+
+// SetNillableNumber sets the "number" field if the given value is not nil.
+func (cuo *CardUpdateOne) SetNillableNumber(s *string) *CardUpdateOne {
+	if s != nil {
+		cuo.SetNumber(*s)
+	}
 	return cuo
 }
 
@@ -218,6 +235,12 @@ func (cuo *CardUpdateOne) ClearOwner() *CardUpdateOne {
 	return cuo
 }
 
+// Where appends a list predicates to the CardUpdate builder.
+func (cuo *CardUpdateOne) Where(ps ...predicate.Card) *CardUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *CardUpdateOne) Select(field string, fields ...string) *CardUpdateOne {
@@ -227,7 +250,7 @@ func (cuo *CardUpdateOne) Select(field string, fields ...string) *CardUpdateOne 
 
 // Save executes the query and returns the updated Card entity.
 func (cuo *CardUpdateOne) Save(ctx context.Context) (*Card, error) {
-	return withHooks[*Card, CardMutation](ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -264,16 +287,7 @@ func (cuo *CardUpdateOne) sqlSave(ctx context.Context) (_node *Card, err error) 
 	if err := cuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   card.Table,
-			Columns: card.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: card.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(card.Table, card.Columns, sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Card.id" for update`)}
@@ -312,10 +326,7 @@ func (cuo *CardUpdateOne) sqlSave(ctx context.Context) (_node *Card, err error) 
 			Columns: []string{card.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -328,10 +339,7 @@ func (cuo *CardUpdateOne) sqlSave(ctx context.Context) (_node *Card, err error) 
 			Columns: []string{card.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/entc/integration/json/ent/schema"
 	"entgo.io/ent/entc/integration/json/ent/user"
@@ -39,8 +40,17 @@ type User struct {
 	Floats []float64 `json:"floats,omitempty"`
 	// Strings holds the value of the "strings" field.
 	Strings []string `json:"strings,omitempty"`
+	// IntsValidate holds the value of the "ints_validate" field.
+	IntsValidate []int `json:"ints_validate,omitempty"`
+	// FloatsValidate holds the value of the "floats_validate" field.
+	FloatsValidate []float64 `json:"floats_validate,omitempty"`
+	// StringsValidate holds the value of the "strings_validate" field.
+	StringsValidate []string `json:"strings_validate,omitempty"`
 	// Addr holds the value of the "addr" field.
 	Addr schema.Addr `json:"-"`
+	// Unknown holds the value of the "unknown" field.
+	Unknown      any `json:"unknown,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -48,12 +58,12 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldT, user.FieldURL, user.FieldURLs, user.FieldRaw, user.FieldDirs, user.FieldInts, user.FieldFloats, user.FieldStrings, user.FieldAddr:
+		case user.FieldT, user.FieldURL, user.FieldURLs, user.FieldRaw, user.FieldDirs, user.FieldInts, user.FieldFloats, user.FieldStrings, user.FieldIntsValidate, user.FieldFloatsValidate, user.FieldStringsValidate, user.FieldAddr, user.FieldUnknown:
 			values[i] = new([]byte)
 		case user.FieldID:
 			values[i] = new(sql.NullInt64)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type User", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -137,6 +147,30 @@ func (u *User) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field strings: %w", err)
 				}
 			}
+		case user.FieldIntsValidate:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field ints_validate", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &u.IntsValidate); err != nil {
+					return fmt.Errorf("unmarshal field ints_validate: %w", err)
+				}
+			}
+		case user.FieldFloatsValidate:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field floats_validate", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &u.FloatsValidate); err != nil {
+					return fmt.Errorf("unmarshal field floats_validate: %w", err)
+				}
+			}
+		case user.FieldStringsValidate:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field strings_validate", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &u.StringsValidate); err != nil {
+					return fmt.Errorf("unmarshal field strings_validate: %w", err)
+				}
+			}
 		case user.FieldAddr:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field addr", values[i])
@@ -145,16 +179,32 @@ func (u *User) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field addr: %w", err)
 				}
 			}
+		case user.FieldUnknown:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field unknown", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &u.Unknown); err != nil {
+					return fmt.Errorf("unmarshal field unknown: %w", err)
+				}
+			}
+		default:
+			u.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the User.
+// This includes values selected through modifiers, order, etc.
+func (u *User) Value(name string) (ent.Value, error) {
+	return u.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (u *User) Update() *UserUpdateOne {
-	return (&UserClient{config: u.config}).UpdateOne(u)
+	return NewUserClient(u.config).UpdateOne(u)
 }
 
 // Unwrap unwraps the User entity that was returned from a transaction after it was closed,
@@ -197,16 +247,22 @@ func (u *User) String() string {
 	builder.WriteString("strings=")
 	builder.WriteString(fmt.Sprintf("%v", u.Strings))
 	builder.WriteString(", ")
+	builder.WriteString("ints_validate=")
+	builder.WriteString(fmt.Sprintf("%v", u.IntsValidate))
+	builder.WriteString(", ")
+	builder.WriteString("floats_validate=")
+	builder.WriteString(fmt.Sprintf("%v", u.FloatsValidate))
+	builder.WriteString(", ")
+	builder.WriteString("strings_validate=")
+	builder.WriteString(fmt.Sprintf("%v", u.StringsValidate))
+	builder.WriteString(", ")
 	builder.WriteString("addr=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("unknown=")
+	builder.WriteString(fmt.Sprintf("%v", u.Unknown))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
 // Users is a parsable slice of User.
 type Users []*User
-
-func (u Users) config(cfg config) {
-	for _i := range u {
-		u[_i].config = cfg
-	}
-}

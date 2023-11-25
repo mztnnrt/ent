@@ -94,7 +94,7 @@ mkdir ent-sum-file
 cd ent-sum-file
 go mod init ent-sum-file
 go install entgo.io/ent/cmd/ent@master
-go run entgo.io/ent/cmd/ent init User
+go run entgo.io/ent/cmd/ent new User
 sed -i -E 's|^//go(.*)$|//go\1 --feature sql/versioned-migration|' ent/generate.go
 go generate ./...
 docker run --rm --name atlas-sum --detach --env MYSQL_ROOT_PASSWORD=pass --env MYSQL_DATABASE=ent -p 3306:3306 mysql
@@ -226,7 +226,7 @@ go run -mod=mod ariga.io/atlas/cmd/atlas migrate hash --force
 As a safety measure, the Atlas CLI does not operate on a migration directory that is not in sync with its `atlas.sum`
 file. Therefore, you need to add the `--force` flag to the command. 
 
-For cases, where a developer forgets to update the `atlas.sum` file after making a manual change, you can add
+For cases where a developer forgets to update the `atlas.sum` file after making a manual change, you can add
 an `atlas migrate validate` call to your CI. We are actively working on a GitHub action and CI solution, that does this 
 (among and other things) for you _out-of-the-box_.
 

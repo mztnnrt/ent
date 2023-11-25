@@ -142,11 +142,7 @@ func HasToken() predicate.Account {
 // HasTokenWith applies the HasEdge predicate on the "token" edge with a given conditions (other predicates).
 func HasTokenWith(preds ...predicate.Token) predicate.Account {
 	return predicate.Account(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TokenInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, TokenTable, TokenColumn),
-		)
+		step := newTokenStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -157,32 +153,15 @@ func HasTokenWith(preds ...predicate.Token) predicate.Account {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Account) predicate.Account {
-	return predicate.Account(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Account(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Account) predicate.Account {
-	return predicate.Account(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Account(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Account) predicate.Account {
-	return predicate.Account(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Account(sql.NotPredicates(p))
 }

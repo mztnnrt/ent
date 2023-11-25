@@ -31,7 +31,7 @@ func (bd *BlogDelete) Where(ps ...predicate.Blog) *BlogDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (bd *BlogDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, BlogMutation](ctx, bd.sqlExec, bd.mutation, bd.hooks)
+	return withHooks(ctx, bd.sqlExec, bd.mutation, bd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (bd *BlogDelete) ExecX(ctx context.Context) int {
 }
 
 func (bd *BlogDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: blog.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: blog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(blog.Table, sqlgraph.NewFieldSpec(blog.FieldID, field.TypeInt))
 	if ps := bd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type BlogDeleteOne struct {
 	bd *BlogDelete
 }
 
+// Where appends a list predicates to the BlogDelete builder.
+func (bdo *BlogDeleteOne) Where(ps ...predicate.Blog) *BlogDeleteOne {
+	bdo.bd.mutation.Where(ps...)
+	return bdo
+}
+
 // Exec executes the deletion query.
 func (bdo *BlogDeleteOne) Exec(ctx context.Context) error {
 	n, err := bdo.bd.Exec(ctx)
@@ -88,5 +86,7 @@ func (bdo *BlogDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (bdo *BlogDeleteOne) ExecX(ctx context.Context) {
-	bdo.bd.ExecX(ctx)
+	if err := bdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

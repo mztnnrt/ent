@@ -35,7 +35,7 @@ func (zc *ZooCreate) Mutation() *ZooMutation {
 
 // Save creates the Zoo in the database.
 func (zc *ZooCreate) Save(ctx context.Context) (*Zoo, error) {
-	return withHooks[*Zoo, ZooMutation](ctx, zc.sqlSave, zc.mutation, zc.hooks)
+	return withHooks(ctx, zc.sqlSave, zc.mutation, zc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -88,13 +88,7 @@ func (zc *ZooCreate) sqlSave(ctx context.Context) (*Zoo, error) {
 func (zc *ZooCreate) createSpec() (*Zoo, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Zoo{config: zc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: zoo.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: zoo.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(zoo.Table, sqlgraph.NewFieldSpec(zoo.FieldID, field.TypeInt))
 	)
 	if id, ok := zc.mutation.ID(); ok {
 		_node.ID = id
@@ -106,11 +100,15 @@ func (zc *ZooCreate) createSpec() (*Zoo, *sqlgraph.CreateSpec) {
 // ZooCreateBulk is the builder for creating many Zoo entities in bulk.
 type ZooCreateBulk struct {
 	config
+	err      error
 	builders []*ZooCreate
 }
 
 // Save creates the Zoo entities in the database.
 func (zcb *ZooCreateBulk) Save(ctx context.Context) ([]*Zoo, error) {
+	if zcb.err != nil {
+		return nil, zcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(zcb.builders))
 	nodes := make([]*Zoo, len(zcb.builders))
 	mutators := make([]Mutator, len(zcb.builders))
@@ -126,8 +124,8 @@ func (zcb *ZooCreateBulk) Save(ctx context.Context) ([]*Zoo, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, zcb.builders[i+1].mutation)
 				} else {

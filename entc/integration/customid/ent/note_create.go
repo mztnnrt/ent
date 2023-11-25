@@ -97,7 +97,7 @@ func (nc *NoteCreate) Mutation() *NoteMutation {
 // Save creates the Note in the database.
 func (nc *NoteCreate) Save(ctx context.Context) (*Note, error) {
 	nc.defaults()
-	return withHooks[*Note, NoteMutation](ctx, nc.sqlSave, nc.mutation, nc.hooks)
+	return withHooks(ctx, nc.sqlSave, nc.mutation, nc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -166,13 +166,7 @@ func (nc *NoteCreate) sqlSave(ctx context.Context) (*Note, error) {
 func (nc *NoteCreate) createSpec() (*Note, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Note{config: nc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: note.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: note.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(note.Table, sqlgraph.NewFieldSpec(note.FieldID, field.TypeString))
 	)
 	_spec.OnConflict = nc.conflict
 	if id, ok := nc.mutation.ID(); ok {
@@ -191,10 +185,7 @@ func (nc *NoteCreate) createSpec() (*Note, *sqlgraph.CreateSpec) {
 			Columns: []string{note.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -211,10 +202,7 @@ func (nc *NoteCreate) createSpec() (*Note, *sqlgraph.CreateSpec) {
 			Columns: []string{note.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
-					Column: note.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(note.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -402,12 +390,16 @@ func (u *NoteUpsertOne) IDX(ctx context.Context) schema.NoteID {
 // NoteCreateBulk is the builder for creating many Note entities in bulk.
 type NoteCreateBulk struct {
 	config
+	err      error
 	builders []*NoteCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Note entities in the database.
 func (ncb *NoteCreateBulk) Save(ctx context.Context) ([]*Note, error) {
+	if ncb.err != nil {
+		return nil, ncb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ncb.builders))
 	nodes := make([]*Note, len(ncb.builders))
 	mutators := make([]Mutator, len(ncb.builders))
@@ -424,8 +416,8 @@ func (ncb *NoteCreateBulk) Save(ctx context.Context) ([]*Note, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
 				} else {
@@ -595,6 +587,9 @@ func (u *NoteUpsertBulk) ClearText() *NoteUpsertBulk {
 
 // Exec executes the query.
 func (u *NoteUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the NoteCreateBulk instead", i)

@@ -76,7 +76,7 @@ func (su *SpecUpdate) RemoveCard(c ...*Card) *SpecUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (su *SpecUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, SpecMutation](ctx, su.sqlSave, su.mutation, su.hooks)
+	return withHooks(ctx, su.sqlSave, su.mutation, su.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -108,16 +108,7 @@ func (su *SpecUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *SpecUpdat
 }
 
 func (su *SpecUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   spec.Table,
-			Columns: spec.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: spec.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(spec.Table, spec.Columns, sqlgraph.NewFieldSpec(spec.FieldID, field.TypeInt))
 	if ps := su.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -133,10 +124,7 @@ func (su *SpecUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -149,10 +137,7 @@ func (su *SpecUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -168,10 +153,7 @@ func (su *SpecUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -242,6 +224,12 @@ func (suo *SpecUpdateOne) RemoveCard(c ...*Card) *SpecUpdateOne {
 	return suo.RemoveCardIDs(ids...)
 }
 
+// Where appends a list predicates to the SpecUpdate builder.
+func (suo *SpecUpdateOne) Where(ps ...predicate.Spec) *SpecUpdateOne {
+	suo.mutation.Where(ps...)
+	return suo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (suo *SpecUpdateOne) Select(field string, fields ...string) *SpecUpdateOne {
@@ -251,7 +239,7 @@ func (suo *SpecUpdateOne) Select(field string, fields ...string) *SpecUpdateOne 
 
 // Save executes the query and returns the updated Spec entity.
 func (suo *SpecUpdateOne) Save(ctx context.Context) (*Spec, error) {
-	return withHooks[*Spec, SpecMutation](ctx, suo.sqlSave, suo.mutation, suo.hooks)
+	return withHooks(ctx, suo.sqlSave, suo.mutation, suo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -283,16 +271,7 @@ func (suo *SpecUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *SpecU
 }
 
 func (suo *SpecUpdateOne) sqlSave(ctx context.Context) (_node *Spec, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   spec.Table,
-			Columns: spec.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: spec.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(spec.Table, spec.Columns, sqlgraph.NewFieldSpec(spec.FieldID, field.TypeInt))
 	id, ok := suo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Spec.id" for update`)}
@@ -325,10 +304,7 @@ func (suo *SpecUpdateOne) sqlSave(ctx context.Context) (_node *Spec, err error) 
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -341,10 +317,7 @@ func (suo *SpecUpdateOne) sqlSave(ctx context.Context) (_node *Spec, err error) 
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -360,10 +333,7 @@ func (suo *SpecUpdateOne) sqlSave(ctx context.Context) (_node *Spec, err error) 
 			Columns: spec.CardPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: card.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -56,7 +56,7 @@ func (gtc *GroupTagCreate) Mutation() *GroupTagMutation {
 
 // Save creates the GroupTag in the database.
 func (gtc *GroupTagCreate) Save(ctx context.Context) (*GroupTag, error) {
-	return withHooks[*GroupTag, GroupTagMutation](ctx, gtc.sqlSave, gtc.mutation, gtc.hooks)
+	return withHooks(ctx, gtc.sqlSave, gtc.mutation, gtc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -119,13 +119,7 @@ func (gtc *GroupTagCreate) sqlSave(ctx context.Context) (*GroupTag, error) {
 func (gtc *GroupTagCreate) createSpec() (*GroupTag, *sqlgraph.CreateSpec) {
 	var (
 		_node = &GroupTag{config: gtc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: grouptag.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: grouptag.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(grouptag.Table, sqlgraph.NewFieldSpec(grouptag.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = gtc.conflict
 	if nodes := gtc.mutation.TagIDs(); len(nodes) > 0 {
@@ -136,10 +130,7 @@ func (gtc *GroupTagCreate) createSpec() (*GroupTag, *sqlgraph.CreateSpec) {
 			Columns: []string{grouptag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -156,10 +147,7 @@ func (gtc *GroupTagCreate) createSpec() (*GroupTag, *sqlgraph.CreateSpec) {
 			Columns: []string{grouptag.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -348,12 +336,16 @@ func (u *GroupTagUpsertOne) IDX(ctx context.Context) int {
 // GroupTagCreateBulk is the builder for creating many GroupTag entities in bulk.
 type GroupTagCreateBulk struct {
 	config
+	err      error
 	builders []*GroupTagCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the GroupTag entities in the database.
 func (gtcb *GroupTagCreateBulk) Save(ctx context.Context) ([]*GroupTag, error) {
+	if gtcb.err != nil {
+		return nil, gtcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(gtcb.builders))
 	nodes := make([]*GroupTag, len(gtcb.builders))
 	mutators := make([]Mutator, len(gtcb.builders))
@@ -369,8 +361,8 @@ func (gtcb *GroupTagCreateBulk) Save(ctx context.Context) ([]*GroupTag, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, gtcb.builders[i+1].mutation)
 				} else {
@@ -541,6 +533,9 @@ func (u *GroupTagUpsertBulk) UpdateGroupID() *GroupTagUpsertBulk {
 
 // Exec executes the query.
 func (u *GroupTagUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the GroupTagCreateBulk instead", i)

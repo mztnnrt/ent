@@ -31,7 +31,7 @@ func (md *MediaDelete) Where(ps ...predicate.Media) *MediaDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (md *MediaDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, MediaMutation](ctx, md.sqlExec, md.mutation, md.hooks)
+	return withHooks(ctx, md.sqlExec, md.mutation, md.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (md *MediaDelete) ExecX(ctx context.Context) int {
 }
 
 func (md *MediaDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: media.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: media.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(media.Table, sqlgraph.NewFieldSpec(media.FieldID, field.TypeInt))
 	if ps := md.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type MediaDeleteOne struct {
 	md *MediaDelete
 }
 
+// Where appends a list predicates to the MediaDelete builder.
+func (mdo *MediaDeleteOne) Where(ps ...predicate.Media) *MediaDeleteOne {
+	mdo.md.mutation.Where(ps...)
+	return mdo
+}
+
 // Exec executes the deletion query.
 func (mdo *MediaDeleteOne) Exec(ctx context.Context) error {
 	n, err := mdo.md.Exec(ctx)
@@ -88,5 +86,7 @@ func (mdo *MediaDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (mdo *MediaDeleteOne) ExecX(ctx context.Context) {
-	mdo.md.ExecX(ctx)
+	if err := mdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

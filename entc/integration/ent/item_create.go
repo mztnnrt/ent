@@ -62,7 +62,7 @@ func (ic *ItemCreate) Mutation() *ItemMutation {
 // Save creates the Item in the database.
 func (ic *ItemCreate) Save(ctx context.Context) (*Item, error) {
 	ic.defaults()
-	return withHooks[*Item, ItemMutation](ctx, ic.sqlSave, ic.mutation, ic.hooks)
+	return withHooks(ctx, ic.sqlSave, ic.mutation, ic.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -136,13 +136,7 @@ func (ic *ItemCreate) sqlSave(ctx context.Context) (*Item, error) {
 func (ic *ItemCreate) createSpec() (*Item, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Item{config: ic.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: item.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: item.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(item.Table, sqlgraph.NewFieldSpec(item.FieldID, field.TypeString))
 	)
 	_spec.OnConflict = ic.conflict
 	if id, ok := ic.mutation.ID(); ok {
@@ -333,12 +327,16 @@ func (u *ItemUpsertOne) IDX(ctx context.Context) string {
 // ItemCreateBulk is the builder for creating many Item entities in bulk.
 type ItemCreateBulk struct {
 	config
+	err      error
 	builders []*ItemCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Item entities in the database.
 func (icb *ItemCreateBulk) Save(ctx context.Context) ([]*Item, error) {
+	if icb.err != nil {
+		return nil, icb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(icb.builders))
 	nodes := make([]*Item, len(icb.builders))
 	mutators := make([]Mutator, len(icb.builders))
@@ -355,8 +353,8 @@ func (icb *ItemCreateBulk) Save(ctx context.Context) ([]*Item, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, icb.builders[i+1].mutation)
 				} else {
@@ -526,6 +524,9 @@ func (u *ItemUpsertBulk) ClearText() *ItemUpsertBulk {
 
 // Exec executes the query.
 func (u *ItemUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ItemCreateBulk instead", i)

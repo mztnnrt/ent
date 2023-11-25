@@ -31,7 +31,7 @@ func (ugd *UserGroupDelete) Where(ps ...predicate.UserGroup) *UserGroupDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ugd *UserGroupDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, UserGroupMutation](ctx, ugd.sqlExec, ugd.mutation, ugd.hooks)
+	return withHooks(ctx, ugd.sqlExec, ugd.mutation, ugd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ugd *UserGroupDelete) ExecX(ctx context.Context) int {
 }
 
 func (ugd *UserGroupDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: usergroup.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: usergroup.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(usergroup.Table, sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt))
 	if ps := ugd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type UserGroupDeleteOne struct {
 	ugd *UserGroupDelete
 }
 
+// Where appends a list predicates to the UserGroupDelete builder.
+func (ugdo *UserGroupDeleteOne) Where(ps ...predicate.UserGroup) *UserGroupDeleteOne {
+	ugdo.ugd.mutation.Where(ps...)
+	return ugdo
+}
+
 // Exec executes the deletion query.
 func (ugdo *UserGroupDeleteOne) Exec(ctx context.Context) error {
 	n, err := ugdo.ugd.Exec(ctx)
@@ -88,5 +86,7 @@ func (ugdo *UserGroupDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ugdo *UserGroupDeleteOne) ExecX(ctx context.Context) {
-	ugdo.ugd.ExecX(ctx)
+	if err := ugdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

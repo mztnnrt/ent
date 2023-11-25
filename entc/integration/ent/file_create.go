@@ -165,7 +165,7 @@ func (fc *FileCreate) Mutation() *FileMutation {
 // Save creates the File in the database.
 func (fc *FileCreate) Save(ctx context.Context) (*File, error) {
 	fc.defaults()
-	return withHooks[*File, FileMutation](ctx, fc.sqlSave, fc.mutation, fc.hooks)
+	return withHooks(ctx, fc.sqlSave, fc.mutation, fc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -235,13 +235,7 @@ func (fc *FileCreate) sqlSave(ctx context.Context) (*File, error) {
 func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 	var (
 		_node = &File{config: fc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: file.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: file.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(file.Table, sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = fc.conflict
 	if value, ok := fc.mutation.Size(); ok {
@@ -276,10 +270,7 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 			Columns: []string{file.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -296,10 +287,7 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 			Columns: []string{file.TypeColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: filetype.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(filetype.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -316,10 +304,7 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 			Columns: []string{file.FieldColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: fieldtype.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(fieldtype.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -689,12 +674,16 @@ func (u *FileUpsertOne) IDX(ctx context.Context) int {
 // FileCreateBulk is the builder for creating many File entities in bulk.
 type FileCreateBulk struct {
 	config
+	err      error
 	builders []*FileCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the File entities in the database.
 func (fcb *FileCreateBulk) Save(ctx context.Context) ([]*File, error) {
+	if fcb.err != nil {
+		return nil, fcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(fcb.builders))
 	nodes := make([]*File, len(fcb.builders))
 	mutators := make([]Mutator, len(fcb.builders))
@@ -711,8 +700,8 @@ func (fcb *FileCreateBulk) Save(ctx context.Context) ([]*File, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, fcb.builders[i+1].mutation)
 				} else {
@@ -981,6 +970,9 @@ func (u *FileUpsertBulk) ClearFieldID() *FileUpsertBulk {
 
 // Exec executes the query.
 func (u *FileUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the FileCreateBulk instead", i)

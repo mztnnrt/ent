@@ -111,7 +111,7 @@ func (bc *BlobCreate) Mutation() *BlobMutation {
 // Save creates the Blob in the database.
 func (bc *BlobCreate) Save(ctx context.Context) (*Blob, error) {
 	bc.defaults()
-	return withHooks[*Blob, BlobMutation](ctx, bc.sqlSave, bc.mutation, bc.hooks)
+	return withHooks(ctx, bc.sqlSave, bc.mutation, bc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -189,13 +189,7 @@ func (bc *BlobCreate) sqlSave(ctx context.Context) (*Blob, error) {
 func (bc *BlobCreate) createSpec() (*Blob, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Blob{config: bc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: blob.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: blob.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(blob.Table, sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = bc.conflict
 	if id, ok := bc.mutation.ID(); ok {
@@ -218,10 +212,7 @@ func (bc *BlobCreate) createSpec() (*Blob, *sqlgraph.CreateSpec) {
 			Columns: []string{blob.ParentColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -238,10 +229,7 @@ func (bc *BlobCreate) createSpec() (*Blob, *sqlgraph.CreateSpec) {
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -459,12 +447,16 @@ func (u *BlobUpsertOne) IDX(ctx context.Context) uuid.UUID {
 // BlobCreateBulk is the builder for creating many Blob entities in bulk.
 type BlobCreateBulk struct {
 	config
+	err      error
 	builders []*BlobCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Blob entities in the database.
 func (bcb *BlobCreateBulk) Save(ctx context.Context) ([]*Blob, error) {
+	if bcb.err != nil {
+		return nil, bcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(bcb.builders))
 	nodes := make([]*Blob, len(bcb.builders))
 	mutators := make([]Mutator, len(bcb.builders))
@@ -481,8 +473,8 @@ func (bcb *BlobCreateBulk) Save(ctx context.Context) ([]*Blob, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, bcb.builders[i+1].mutation)
 				} else {
@@ -666,6 +658,9 @@ func (u *BlobUpsertBulk) UpdateCount() *BlobUpsertBulk {
 
 // Exec executes the query.
 func (u *BlobUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the BlobCreateBulk instead", i)

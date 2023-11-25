@@ -214,9 +214,11 @@ In order to use built-in SQL functions such as `DATE()`, use one of the followin
 ```go
 users := client.User.Query().
 	Select(user.FieldID).
-	Where(sql.P(func(b *sql.Builder) {
-		b.WriteString("DATE(").Ident("last_login_at").WriteByte(')').WriteOp(OpGTE).Arg(value)
-	})).
+	Where(func(s *sql.Selector) {
+		s.Where(sql.P(func(b *sql.Builder) {
+			b.WriteString("DATE(").Ident("last_login_at").WriteByte(')').WriteOp(OpGTE).Arg(value)
+		}))
+	}).
 	AllX(ctx)
 ```
 
@@ -321,5 +323,27 @@ sqljson.StringHasPrefix(user.FieldData, "20", sqljson.DotPath("attributes[0].sta
 sqljson.ValueIn(user.FieldURL, []any{"https", "ftp"}, sqljson.Path("Scheme"))
 
 sqljson.ValueNotIn(user.FieldURL, []any{"github", "gitlab"}, sqljson.Path("Host"))
+```
+
+## Comparing Fields
+
+The `dialect/sql` package provides a set of comparison functions that can be used to compare fields in a query.
+
+```go
+client.Order.Query().
+	Where(
+		sql.FieldsEQ(order.FieldTotal, order.FieldTax),
+        sql.FieldsNEQ(order.FieldTotal, order.FieldDiscount),
+	).
+	All(ctx)
+
+client.Order.Query().
+	Where(
+		order.Or(
+			sql.FieldsGT(order.FieldTotal, order.FieldTax),
+			sql.FieldsLT(order.FieldTotal, order.FieldDiscount),
+		),
+	).
+	All(ctx)
 ```
 

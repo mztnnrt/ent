@@ -56,7 +56,7 @@ func (pc *PostCreate) Mutation() *PostMutation {
 
 // Save creates the Post in the database.
 func (pc *PostCreate) Save(ctx context.Context) (*Post, error) {
-	return withHooks[*Post, PostMutation](ctx, pc.sqlSave, pc.mutation, pc.hooks)
+	return withHooks(ctx, pc.sqlSave, pc.mutation, pc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -110,13 +110,7 @@ func (pc *PostCreate) sqlSave(ctx context.Context) (*Post, error) {
 func (pc *PostCreate) createSpec() (*Post, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Post{config: pc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: post.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: post.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(post.Table, sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt))
 	)
 	if value, ok := pc.mutation.Text(); ok {
 		_spec.SetField(post.FieldText, field.TypeString, value)
@@ -130,10 +124,7 @@ func (pc *PostCreate) createSpec() (*Post, *sqlgraph.CreateSpec) {
 			Columns: []string{post.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -148,11 +139,15 @@ func (pc *PostCreate) createSpec() (*Post, *sqlgraph.CreateSpec) {
 // PostCreateBulk is the builder for creating many Post entities in bulk.
 type PostCreateBulk struct {
 	config
+	err      error
 	builders []*PostCreate
 }
 
 // Save creates the Post entities in the database.
 func (pcb *PostCreateBulk) Save(ctx context.Context) ([]*Post, error) {
+	if pcb.err != nil {
+		return nil, pcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(pcb.builders))
 	nodes := make([]*Post, len(pcb.builders))
 	mutators := make([]Mutator, len(pcb.builders))
@@ -168,8 +163,8 @@ func (pcb *PostCreateBulk) Save(ctx context.Context) ([]*Post, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, pcb.builders[i+1].mutation)
 				} else {

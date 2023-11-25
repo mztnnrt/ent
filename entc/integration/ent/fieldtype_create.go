@@ -797,7 +797,7 @@ func (ftc *FieldTypeCreate) Mutation() *FieldTypeMutation {
 // Save creates the FieldType in the database.
 func (ftc *FieldTypeCreate) Save(ctx context.Context) (*FieldType, error) {
 	ftc.defaults()
-	return withHooks[*FieldType, FieldTypeMutation](ctx, ftc.sqlSave, ftc.mutation, ftc.hooks)
+	return withHooks(ctx, ftc.sqlSave, ftc.mutation, ftc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -971,13 +971,7 @@ func (ftc *FieldTypeCreate) sqlSave(ctx context.Context) (*FieldType, error) {
 func (ftc *FieldTypeCreate) createSpec() (*FieldType, *sqlgraph.CreateSpec) {
 	var (
 		_node = &FieldType{config: ftc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: fieldtype.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: fieldtype.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(fieldtype.Table, sqlgraph.NewFieldSpec(fieldtype.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = ftc.conflict
 	if value, ok := ftc.mutation.Int(); ok {
@@ -4176,12 +4170,16 @@ func (u *FieldTypeUpsertOne) IDX(ctx context.Context) int {
 // FieldTypeCreateBulk is the builder for creating many FieldType entities in bulk.
 type FieldTypeCreateBulk struct {
 	config
+	err      error
 	builders []*FieldTypeCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the FieldType entities in the database.
 func (ftcb *FieldTypeCreateBulk) Save(ctx context.Context) ([]*FieldType, error) {
+	if ftcb.err != nil {
+		return nil, ftcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ftcb.builders))
 	nodes := make([]*FieldType, len(ftcb.builders))
 	mutators := make([]Mutator, len(ftcb.builders))
@@ -4198,8 +4196,8 @@ func (ftcb *FieldTypeCreateBulk) Save(ctx context.Context) ([]*FieldType, error)
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ftcb.builders[i+1].mutation)
 				} else {
@@ -5854,6 +5852,9 @@ func (u *FieldTypeUpsertBulk) ClearPasswordOther() *FieldTypeUpsertBulk {
 
 // Exec executes the query.
 func (u *FieldTypeUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the FieldTypeCreateBulk instead", i)

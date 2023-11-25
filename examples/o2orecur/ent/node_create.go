@@ -29,16 +29,16 @@ func (nc *NodeCreate) SetValue(i int) *NodeCreate {
 	return nc
 }
 
-// SetPrevID sets the "prev" edge to the Node entity by ID.
-func (nc *NodeCreate) SetPrevID(id int) *NodeCreate {
-	nc.mutation.SetPrevID(id)
+// SetPrevID sets the "prev_id" field.
+func (nc *NodeCreate) SetPrevID(i int) *NodeCreate {
+	nc.mutation.SetPrevID(i)
 	return nc
 }
 
-// SetNillablePrevID sets the "prev" edge to the Node entity by ID if the given value is not nil.
-func (nc *NodeCreate) SetNillablePrevID(id *int) *NodeCreate {
-	if id != nil {
-		nc = nc.SetPrevID(*id)
+// SetNillablePrevID sets the "prev_id" field if the given value is not nil.
+func (nc *NodeCreate) SetNillablePrevID(i *int) *NodeCreate {
+	if i != nil {
+		nc.SetPrevID(*i)
 	}
 	return nc
 }
@@ -74,7 +74,7 @@ func (nc *NodeCreate) Mutation() *NodeMutation {
 
 // Save creates the Node in the database.
 func (nc *NodeCreate) Save(ctx context.Context) (*Node, error) {
-	return withHooks[*Node, NodeMutation](ctx, nc.sqlSave, nc.mutation, nc.hooks)
+	return withHooks(ctx, nc.sqlSave, nc.mutation, nc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -128,13 +128,7 @@ func (nc *NodeCreate) sqlSave(ctx context.Context) (*Node, error) {
 func (nc *NodeCreate) createSpec() (*Node, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Node{config: nc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: node.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(node.Table, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	)
 	if value, ok := nc.mutation.Value(); ok {
 		_spec.SetField(node.FieldValue, field.TypeInt, value)
@@ -148,16 +142,13 @@ func (nc *NodeCreate) createSpec() (*Node, *sqlgraph.CreateSpec) {
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.node_next = &nodes[0]
+		_node.PrevID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := nc.mutation.NextIDs(); len(nodes) > 0 {
@@ -168,10 +159,7 @@ func (nc *NodeCreate) createSpec() (*Node, *sqlgraph.CreateSpec) {
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -185,11 +173,15 @@ func (nc *NodeCreate) createSpec() (*Node, *sqlgraph.CreateSpec) {
 // NodeCreateBulk is the builder for creating many Node entities in bulk.
 type NodeCreateBulk struct {
 	config
+	err      error
 	builders []*NodeCreate
 }
 
 // Save creates the Node entities in the database.
 func (ncb *NodeCreateBulk) Save(ctx context.Context) ([]*Node, error) {
+	if ncb.err != nil {
+		return nil, ncb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ncb.builders))
 	nodes := make([]*Node, len(ncb.builders))
 	mutators := make([]Mutator, len(ncb.builders))
@@ -205,8 +197,8 @@ func (ncb *NodeCreateBulk) Save(ctx context.Context) ([]*Node, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
 				} else {

@@ -38,7 +38,7 @@ func (ru *RevisionUpdate) Mutation() *RevisionMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ru *RevisionUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, RevisionMutation](ctx, ru.sqlSave, ru.mutation, ru.hooks)
+	return withHooks(ctx, ru.sqlSave, ru.mutation, ru.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -64,16 +64,7 @@ func (ru *RevisionUpdate) ExecX(ctx context.Context) {
 }
 
 func (ru *RevisionUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   revision.Table,
-			Columns: revision.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: revision.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(revision.Table, revision.Columns, sqlgraph.NewFieldSpec(revision.FieldID, field.TypeString))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -106,6 +97,12 @@ func (ruo *RevisionUpdateOne) Mutation() *RevisionMutation {
 	return ruo.mutation
 }
 
+// Where appends a list predicates to the RevisionUpdate builder.
+func (ruo *RevisionUpdateOne) Where(ps ...predicate.Revision) *RevisionUpdateOne {
+	ruo.mutation.Where(ps...)
+	return ruo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruo *RevisionUpdateOne) Select(field string, fields ...string) *RevisionUpdateOne {
@@ -115,7 +112,7 @@ func (ruo *RevisionUpdateOne) Select(field string, fields ...string) *RevisionUp
 
 // Save executes the query and returns the updated Revision entity.
 func (ruo *RevisionUpdateOne) Save(ctx context.Context) (*Revision, error) {
-	return withHooks[*Revision, RevisionMutation](ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
+	return withHooks(ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -141,16 +138,7 @@ func (ruo *RevisionUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ruo *RevisionUpdateOne) sqlSave(ctx context.Context) (_node *Revision, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   revision.Table,
-			Columns: revision.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: revision.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(revision.Table, revision.Columns, sqlgraph.NewFieldSpec(revision.FieldID, field.TypeString))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Revision.id" for update`)}

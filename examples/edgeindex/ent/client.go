@@ -11,15 +11,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 
+	"entgo.io/ent"
 	"entgo.io/ent/examples/edgeindex/ent/migrate"
-
-	"entgo.io/ent/examples/edgeindex/ent/city"
-	"entgo.io/ent/examples/edgeindex/ent/street"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/examples/edgeindex/ent/city"
+	"entgo.io/ent/examples/edgeindex/ent/street"
 )
 
 // Client is the client that holds all ent builders.
@@ -35,9 +36,7 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
-	cfg.options(opts...)
-	client := &Client{config: cfg}
+	client := &Client{config: newConfig(opts...)}
 	client.init()
 	return client
 }
@@ -46,6 +45,62 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.City = NewCityClient(c.config)
 	c.Street = NewStreetClient(c.config)
+}
+
+type (
+	// config is the configuration for the client and its builder.
+	config struct {
+		// driver used for executing database requests.
+		driver dialect.Driver
+		// debug enable a debug logging.
+		debug bool
+		// log used for logging on debug mode.
+		log func(...any)
+		// hooks to execute on mutations.
+		hooks *hooks
+		// interceptors to execute on queries.
+		inters *inters
+	}
+	// Option function to configure the client.
+	Option func(*config)
+)
+
+// newConfig creates a new config for the client.
+func newConfig(opts ...Option) config {
+	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
+	cfg.options(opts...)
+	return cfg
+}
+
+// options applies the options on the config object.
+func (c *config) options(opts ...Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.debug {
+		c.driver = dialect.Debug(c.driver, c.log)
+	}
+}
+
+// Debug enables debug logging on the ent.Driver.
+func Debug() Option {
+	return func(c *config) {
+		c.debug = true
+	}
+}
+
+// Log sets the logging function for debug mode.
+func Log(fn func(...any)) Option {
+	return func(c *config) {
+		c.log = fn
+	}
+}
+
+// Driver configures the client driver.
+func Driver(driver dialect.Driver) Option {
+	return func(c *config) {
+		c.driver = driver
+	}
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -64,11 +119,14 @@ func Open(driverName, dataSourceName string, options ...Option) (*Client, error)
 	}
 }
 
+// ErrTxStarted is returned when trying to start a new transaction from a transactional client.
+var ErrTxStarted = errors.New("ent: cannot start a transaction within a transaction")
+
 // Tx returns a new transactional client. The provided context
 // is used until the transaction is committed or rolled back.
 func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	if _, ok := c.driver.(*txDriver); ok {
-		return nil, errors.New("ent: cannot start a transaction within a transaction")
+		return nil, ErrTxStarted
 	}
 	tx, err := newTx(ctx, c.driver)
 	if err != nil {
@@ -169,7 +227,7 @@ func (c *CityClient) Use(hooks ...Hook) {
 	c.hooks.City = append(c.hooks.City, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `city.Intercept(f(g(h())))`.
 func (c *CityClient) Intercept(interceptors ...Interceptor) {
 	c.inters.City = append(c.inters.City, interceptors...)
@@ -183,6 +241,21 @@ func (c *CityClient) Create() *CityCreate {
 
 // CreateBulk returns a builder for creating a bulk of City entities.
 func (c *CityClient) CreateBulk(builders ...*CityCreate) *CityCreateBulk {
+	return &CityCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CityClient) MapCreateBulk(slice any, setFunc func(*CityCreate, int)) *CityCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CityCreateBulk{err: fmt.Errorf("calling to CityClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CityCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &CityCreateBulk{config: c.config, builders: builders}
 }
 
@@ -227,6 +300,7 @@ func (c *CityClient) DeleteOneID(id int) *CityDeleteOne {
 func (c *CityClient) Query() *CityQuery {
 	return &CityQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeCity},
 		inters: c.Interceptors(),
 	}
 }
@@ -302,7 +376,7 @@ func (c *StreetClient) Use(hooks ...Hook) {
 	c.hooks.Street = append(c.hooks.Street, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `street.Intercept(f(g(h())))`.
 func (c *StreetClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Street = append(c.inters.Street, interceptors...)
@@ -316,6 +390,21 @@ func (c *StreetClient) Create() *StreetCreate {
 
 // CreateBulk returns a builder for creating a bulk of Street entities.
 func (c *StreetClient) CreateBulk(builders ...*StreetCreate) *StreetCreateBulk {
+	return &StreetCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *StreetClient) MapCreateBulk(slice any, setFunc func(*StreetCreate, int)) *StreetCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &StreetCreateBulk{err: fmt.Errorf("calling to StreetClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*StreetCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &StreetCreateBulk{config: c.config, builders: builders}
 }
 
@@ -360,6 +449,7 @@ func (c *StreetClient) DeleteOneID(id int) *StreetDeleteOne {
 func (c *StreetClient) Query() *StreetQuery {
 	return &StreetQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeStreet},
 		inters: c.Interceptors(),
 	}
 }
@@ -418,3 +508,13 @@ func (c *StreetClient) mutate(ctx context.Context, m *StreetMutation) (Value, er
 		return nil, fmt.Errorf("ent: unknown Street mutation op: %q", m.Op())
 	}
 }
+
+// hooks and interceptors per client, for fast access.
+type (
+	hooks struct {
+		City, Street []ent.Hook
+	}
+	inters struct {
+		City, Street []ent.Interceptor
+	}
+)

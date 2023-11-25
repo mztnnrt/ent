@@ -54,9 +54,25 @@ func (ttu *TweetTagUpdate) SetTagID(i int) *TweetTagUpdate {
 	return ttu
 }
 
+// SetNillableTagID sets the "tag_id" field if the given value is not nil.
+func (ttu *TweetTagUpdate) SetNillableTagID(i *int) *TweetTagUpdate {
+	if i != nil {
+		ttu.SetTagID(*i)
+	}
+	return ttu
+}
+
 // SetTweetID sets the "tweet_id" field.
 func (ttu *TweetTagUpdate) SetTweetID(i int) *TweetTagUpdate {
 	ttu.mutation.SetTweetID(i)
+	return ttu
+}
+
+// SetNillableTweetID sets the "tweet_id" field if the given value is not nil.
+func (ttu *TweetTagUpdate) SetNillableTweetID(i *int) *TweetTagUpdate {
+	if i != nil {
+		ttu.SetTweetID(*i)
+	}
 	return ttu
 }
 
@@ -89,7 +105,7 @@ func (ttu *TweetTagUpdate) ClearTweet() *TweetTagUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ttu *TweetTagUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TweetTagMutation](ctx, ttu.sqlSave, ttu.mutation, ttu.hooks)
+	return withHooks(ctx, ttu.sqlSave, ttu.mutation, ttu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -129,16 +145,7 @@ func (ttu *TweetTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ttu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tweettag.Table,
-			Columns: tweettag.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: tweettag.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tweettag.Table, tweettag.Columns, sqlgraph.NewFieldSpec(tweettag.FieldID, field.TypeUUID))
 	if ps := ttu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -157,10 +164,7 @@ func (ttu *TweetTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweettag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -173,10 +177,7 @@ func (ttu *TweetTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweettag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -192,10 +193,7 @@ func (ttu *TweetTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweettag.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -208,10 +206,7 @@ func (ttu *TweetTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweettag.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -259,9 +254,25 @@ func (ttuo *TweetTagUpdateOne) SetTagID(i int) *TweetTagUpdateOne {
 	return ttuo
 }
 
+// SetNillableTagID sets the "tag_id" field if the given value is not nil.
+func (ttuo *TweetTagUpdateOne) SetNillableTagID(i *int) *TweetTagUpdateOne {
+	if i != nil {
+		ttuo.SetTagID(*i)
+	}
+	return ttuo
+}
+
 // SetTweetID sets the "tweet_id" field.
 func (ttuo *TweetTagUpdateOne) SetTweetID(i int) *TweetTagUpdateOne {
 	ttuo.mutation.SetTweetID(i)
+	return ttuo
+}
+
+// SetNillableTweetID sets the "tweet_id" field if the given value is not nil.
+func (ttuo *TweetTagUpdateOne) SetNillableTweetID(i *int) *TweetTagUpdateOne {
+	if i != nil {
+		ttuo.SetTweetID(*i)
+	}
 	return ttuo
 }
 
@@ -292,6 +303,12 @@ func (ttuo *TweetTagUpdateOne) ClearTweet() *TweetTagUpdateOne {
 	return ttuo
 }
 
+// Where appends a list predicates to the TweetTagUpdate builder.
+func (ttuo *TweetTagUpdateOne) Where(ps ...predicate.TweetTag) *TweetTagUpdateOne {
+	ttuo.mutation.Where(ps...)
+	return ttuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ttuo *TweetTagUpdateOne) Select(field string, fields ...string) *TweetTagUpdateOne {
@@ -301,7 +318,7 @@ func (ttuo *TweetTagUpdateOne) Select(field string, fields ...string) *TweetTagU
 
 // Save executes the query and returns the updated TweetTag entity.
 func (ttuo *TweetTagUpdateOne) Save(ctx context.Context) (*TweetTag, error) {
-	return withHooks[*TweetTag, TweetTagMutation](ctx, ttuo.sqlSave, ttuo.mutation, ttuo.hooks)
+	return withHooks(ctx, ttuo.sqlSave, ttuo.mutation, ttuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -341,16 +358,7 @@ func (ttuo *TweetTagUpdateOne) sqlSave(ctx context.Context) (_node *TweetTag, er
 	if err := ttuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tweettag.Table,
-			Columns: tweettag.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: tweettag.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tweettag.Table, tweettag.Columns, sqlgraph.NewFieldSpec(tweettag.FieldID, field.TypeUUID))
 	id, ok := ttuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "TweetTag.id" for update`)}
@@ -386,10 +394,7 @@ func (ttuo *TweetTagUpdateOne) sqlSave(ctx context.Context) (_node *TweetTag, er
 			Columns: []string{tweettag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -402,10 +407,7 @@ func (ttuo *TweetTagUpdateOne) sqlSave(ctx context.Context) (_node *TweetTag, er
 			Columns: []string{tweettag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -421,10 +423,7 @@ func (ttuo *TweetTagUpdateOne) sqlSave(ctx context.Context) (_node *TweetTag, er
 			Columns: []string{tweettag.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -437,10 +436,7 @@ func (ttuo *TweetTagUpdateOne) sqlSave(ctx context.Context) (_node *TweetTag, er
 			Columns: []string{tweettag.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

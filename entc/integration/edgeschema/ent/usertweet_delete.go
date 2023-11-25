@@ -31,7 +31,7 @@ func (utd *UserTweetDelete) Where(ps ...predicate.UserTweet) *UserTweetDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (utd *UserTweetDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, UserTweetMutation](ctx, utd.sqlExec, utd.mutation, utd.hooks)
+	return withHooks(ctx, utd.sqlExec, utd.mutation, utd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (utd *UserTweetDelete) ExecX(ctx context.Context) int {
 }
 
 func (utd *UserTweetDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: usertweet.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: usertweet.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(usertweet.Table, sqlgraph.NewFieldSpec(usertweet.FieldID, field.TypeInt))
 	if ps := utd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type UserTweetDeleteOne struct {
 	utd *UserTweetDelete
 }
 
+// Where appends a list predicates to the UserTweetDelete builder.
+func (utdo *UserTweetDeleteOne) Where(ps ...predicate.UserTweet) *UserTweetDeleteOne {
+	utdo.utd.mutation.Where(ps...)
+	return utdo
+}
+
 // Exec executes the deletion query.
 func (utdo *UserTweetDeleteOne) Exec(ctx context.Context) error {
 	n, err := utdo.utd.Exec(ctx)
@@ -88,5 +86,7 @@ func (utdo *UserTweetDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (utdo *UserTweetDeleteOne) ExecX(ctx context.Context) {
-	utdo.utd.ExecX(ctx)
+	if err := utdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

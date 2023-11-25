@@ -8,7 +8,6 @@ package privacy
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/entc/integration/edgeschema/ent"
 	"entgo.io/ent/entql"
@@ -30,19 +29,19 @@ var (
 	Skip = privacy.Skip
 )
 
-// Allowf returns an formatted wrapped Allow decision.
+// Allowf returns a formatted wrapped Allow decision.
 func Allowf(format string, a ...any) error {
-	return fmt.Errorf(format+": %w", append(a, Allow)...)
+	return privacy.Allowf(format, a...)
 }
 
-// Denyf returns an formatted wrapped Deny decision.
+// Denyf returns a formatted wrapped Deny decision.
 func Denyf(format string, a ...any) error {
-	return fmt.Errorf(format+": %w", append(a, Deny)...)
+	return privacy.Denyf(format, a...)
 }
 
-// Skipf returns an formatted wrapped Skip decision.
+// Skipf returns a formatted wrapped Skip decision.
 func Skipf(format string, a ...any) error {
-	return fmt.Errorf(format+": %w", append(a, Skip)...)
+	return privacy.Skipf(format, a...)
 }
 
 // DecisionContext creates a new context from the given parent context with
@@ -71,6 +70,12 @@ type (
 	MutationRule = privacy.MutationRule
 	// MutationPolicy combines multiple mutation rules into a single policy.
 	MutationPolicy = privacy.MutationPolicy
+	// MutationRuleFunc type is an adapter which allows the use of
+	// ordinary functions as mutation rules.
+	MutationRuleFunc = privacy.MutationRuleFunc
+
+	// QueryMutationRule is an interface which groups query and mutation rules.
+	QueryMutationRule = privacy.QueryMutationRule
 )
 
 // QueryRuleFunc type is an adapter to allow the use of
@@ -82,68 +87,24 @@ func (f QueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
 	return f(ctx, q)
 }
 
-// MutationRuleFunc type is an adapter which allows the use of
-// ordinary functions as mutation rules.
-type MutationRuleFunc func(context.Context, ent.Mutation) error
-
-// EvalMutation returns f(ctx, m).
-func (f MutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
-	return f(ctx, m)
-}
-
-// QueryMutationRule is an interface which groups query and mutation rules.
-type QueryMutationRule interface {
-	QueryRule
-	MutationRule
-}
-
 // AlwaysAllowRule returns a rule that returns an allow decision.
 func AlwaysAllowRule() QueryMutationRule {
-	return fixedDecision{Allow}
+	return privacy.AlwaysAllowRule()
 }
 
 // AlwaysDenyRule returns a rule that returns a deny decision.
 func AlwaysDenyRule() QueryMutationRule {
-	return fixedDecision{Deny}
-}
-
-type fixedDecision struct {
-	decision error
-}
-
-func (f fixedDecision) EvalQuery(context.Context, ent.Query) error {
-	return f.decision
-}
-
-func (f fixedDecision) EvalMutation(context.Context, ent.Mutation) error {
-	return f.decision
-}
-
-type contextDecision struct {
-	eval func(context.Context) error
+	return privacy.AlwaysDenyRule()
 }
 
 // ContextQueryMutationRule creates a query/mutation rule from a context eval func.
 func ContextQueryMutationRule(eval func(context.Context) error) QueryMutationRule {
-	return contextDecision{eval}
-}
-
-func (c contextDecision) EvalQuery(ctx context.Context, _ ent.Query) error {
-	return c.eval(ctx)
-}
-
-func (c contextDecision) EvalMutation(ctx context.Context, _ ent.Mutation) error {
-	return c.eval(ctx)
+	return privacy.ContextQueryMutationRule(eval)
 }
 
 // OnMutationOperation evaluates the given rule only on a given mutation operation.
 func OnMutationOperation(rule MutationRule, op ent.Op) MutationRule {
-	return MutationRuleFunc(func(ctx context.Context, m ent.Mutation) error {
-		if m.Op().Is(op) {
-			return rule.EvalMutation(ctx, m)
-		}
-		return Skip
-	})
+	return privacy.OnMutationOperation(rule, op)
 }
 
 // DenyMutationOperationRule returns a rule denying specified mutation operation.
@@ -152,6 +113,54 @@ func DenyMutationOperationRule(op ent.Op) MutationRule {
 		return Denyf("ent/privacy: operation %s is not allowed", m.Op())
 	})
 	return OnMutationOperation(rule, op)
+}
+
+// The AttachedFileQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type AttachedFileQueryRuleFunc func(context.Context, *ent.AttachedFileQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f AttachedFileQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AttachedFileQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.AttachedFileQuery", q)
+}
+
+// The AttachedFileMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type AttachedFileMutationRuleFunc func(context.Context, *ent.AttachedFileMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f AttachedFileMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.AttachedFileMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.AttachedFileMutation", m)
+}
+
+// The FileQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type FileQueryRuleFunc func(context.Context, *ent.FileQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f FileQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.FileQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.FileQuery", q)
+}
+
+// The FileMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type FileMutationRuleFunc func(context.Context, *ent.FileMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f FileMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.FileMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.FileMutation", m)
 }
 
 // The FriendshipQueryRuleFunc type is an adapter to allow the use of ordinary
@@ -224,6 +233,30 @@ func (f GroupTagMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutati
 		return f(ctx, m)
 	}
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.GroupTagMutation", m)
+}
+
+// The ProcessQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ProcessQueryRuleFunc func(context.Context, *ent.ProcessQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ProcessQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ProcessQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ProcessQuery", q)
+}
+
+// The ProcessMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ProcessMutationRuleFunc func(context.Context, *ent.ProcessMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ProcessMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ProcessMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ProcessMutation", m)
 }
 
 // The RelationshipQueryRuleFunc type is an adapter to allow the use of ordinary
@@ -525,11 +558,17 @@ var _ QueryMutationRule = FilterFunc(nil)
 
 func queryFilter(q ent.Query) (Filter, error) {
 	switch q := q.(type) {
+	case *ent.AttachedFileQuery:
+		return q.Filter(), nil
+	case *ent.FileQuery:
+		return q.Filter(), nil
 	case *ent.FriendshipQuery:
 		return q.Filter(), nil
 	case *ent.GroupQuery:
 		return q.Filter(), nil
 	case *ent.GroupTagQuery:
+		return q.Filter(), nil
+	case *ent.ProcessQuery:
 		return q.Filter(), nil
 	case *ent.RelationshipQuery:
 		return q.Filter(), nil
@@ -560,11 +599,17 @@ func queryFilter(q ent.Query) (Filter, error) {
 
 func mutationFilter(m ent.Mutation) (Filter, error) {
 	switch m := m.(type) {
+	case *ent.AttachedFileMutation:
+		return m.Filter(), nil
+	case *ent.FileMutation:
+		return m.Filter(), nil
 	case *ent.FriendshipMutation:
 		return m.Filter(), nil
 	case *ent.GroupMutation:
 		return m.Filter(), nil
 	case *ent.GroupTagMutation:
+		return m.Filter(), nil
+	case *ent.ProcessMutation:
 		return m.Filter(), nil
 	case *ent.RelationshipMutation:
 		return m.Filter(), nil

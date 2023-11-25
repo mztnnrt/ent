@@ -39,6 +39,14 @@ func (tu *TokenUpdate) SetBody(s string) *TokenUpdate {
 	return tu
 }
 
+// SetNillableBody sets the "body" field if the given value is not nil.
+func (tu *TokenUpdate) SetNillableBody(s *string) *TokenUpdate {
+	if s != nil {
+		tu.SetBody(*s)
+	}
+	return tu
+}
+
 // SetAccountID sets the "account" edge to the Account entity by ID.
 func (tu *TokenUpdate) SetAccountID(id sid.ID) *TokenUpdate {
 	tu.mutation.SetAccountID(id)
@@ -63,7 +71,7 @@ func (tu *TokenUpdate) ClearAccount() *TokenUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (tu *TokenUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TokenMutation](ctx, tu.sqlSave, tu.mutation, tu.hooks)
+	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -105,16 +113,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   token.Table,
-			Columns: token.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeOther,
-				Column: token.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeOther))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -133,10 +132,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{token.AccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeOther,
-					Column: account.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeOther),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -149,10 +145,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{token.AccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeOther,
-					Column: account.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeOther),
 			},
 		}
 		for _, k := range nodes {
@@ -186,6 +179,14 @@ func (tuo *TokenUpdateOne) SetBody(s string) *TokenUpdateOne {
 	return tuo
 }
 
+// SetNillableBody sets the "body" field if the given value is not nil.
+func (tuo *TokenUpdateOne) SetNillableBody(s *string) *TokenUpdateOne {
+	if s != nil {
+		tuo.SetBody(*s)
+	}
+	return tuo
+}
+
 // SetAccountID sets the "account" edge to the Account entity by ID.
 func (tuo *TokenUpdateOne) SetAccountID(id sid.ID) *TokenUpdateOne {
 	tuo.mutation.SetAccountID(id)
@@ -208,6 +209,12 @@ func (tuo *TokenUpdateOne) ClearAccount() *TokenUpdateOne {
 	return tuo
 }
 
+// Where appends a list predicates to the TokenUpdate builder.
+func (tuo *TokenUpdateOne) Where(ps ...predicate.Token) *TokenUpdateOne {
+	tuo.mutation.Where(ps...)
+	return tuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (tuo *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOne {
@@ -217,7 +224,7 @@ func (tuo *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOn
 
 // Save executes the query and returns the updated Token entity.
 func (tuo *TokenUpdateOne) Save(ctx context.Context) (*Token, error) {
-	return withHooks[*Token, TokenMutation](ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -259,16 +266,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 	if err := tuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   token.Table,
-			Columns: token.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeOther,
-				Column: token.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeOther))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Token.id" for update`)}
@@ -304,10 +302,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 			Columns: []string{token.AccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeOther,
-					Column: account.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeOther),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -320,10 +315,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 			Columns: []string{token.AccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeOther,
-					Column: account.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeOther),
 			},
 		}
 		for _, k := range nodes {

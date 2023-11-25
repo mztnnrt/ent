@@ -95,7 +95,7 @@ func (cu *CarUpdate) RemoveRentals(r ...*Rental) *CarUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CarUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CarMutation](ctx, cu.sqlSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -121,16 +121,7 @@ func (cu *CarUpdate) ExecX(ctx context.Context) {
 }
 
 func (cu *CarUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   car.Table,
-			Columns: car.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: car.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(car.Table, car.Columns, sqlgraph.NewFieldSpec(car.FieldID, field.TypeUUID))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -152,10 +143,7 @@ func (cu *CarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -168,10 +156,7 @@ func (cu *CarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -187,10 +172,7 @@ func (cu *CarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -279,6 +261,12 @@ func (cuo *CarUpdateOne) RemoveRentals(r ...*Rental) *CarUpdateOne {
 	return cuo.RemoveRentalIDs(ids...)
 }
 
+// Where appends a list predicates to the CarUpdate builder.
+func (cuo *CarUpdateOne) Where(ps ...predicate.Car) *CarUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *CarUpdateOne) Select(field string, fields ...string) *CarUpdateOne {
@@ -288,7 +276,7 @@ func (cuo *CarUpdateOne) Select(field string, fields ...string) *CarUpdateOne {
 
 // Save executes the query and returns the updated Car entity.
 func (cuo *CarUpdateOne) Save(ctx context.Context) (*Car, error) {
-	return withHooks[*Car, CarMutation](ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -314,16 +302,7 @@ func (cuo *CarUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (cuo *CarUpdateOne) sqlSave(ctx context.Context) (_node *Car, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   car.Table,
-			Columns: car.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: car.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(car.Table, car.Columns, sqlgraph.NewFieldSpec(car.FieldID, field.TypeUUID))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Car.id" for update`)}
@@ -362,10 +341,7 @@ func (cuo *CarUpdateOne) sqlSave(ctx context.Context) (_node *Car, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -378,10 +354,7 @@ func (cuo *CarUpdateOne) sqlSave(ctx context.Context) (_node *Car, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -397,10 +370,7 @@ func (cuo *CarUpdateOne) sqlSave(ctx context.Context) (_node *Car, err error) {
 			Columns: []string{car.RentalsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: rental.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

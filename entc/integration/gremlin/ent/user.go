@@ -43,6 +43,8 @@ type User struct {
 	Employment user.Employment `json:"employment,omitempty"`
 	// SSOCert holds the value of the "SSOCert" field.
 	SSOCert string `json:"SSOCert,omitempty"`
+	// FilesCount holds the value of the "files_count" field.
+	FilesCount int `json:"files_count,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges UserEdges `json:"edges"`
@@ -211,6 +213,7 @@ func (u *User) FromResponse(res *gremlin.Response) error {
 		Role        user.Role       `json:"role,omitempty"`
 		Employment  user.Employment `json:"employment,omitempty"`
 		SSOCert     string          `json:"sso_cert,omitempty"`
+		FilesCount  int             `json:"files_count,omitempty"`
 	}
 	if err := vmap.Decode(&scanu); err != nil {
 		return err
@@ -227,69 +230,70 @@ func (u *User) FromResponse(res *gremlin.Response) error {
 	u.Role = scanu.Role
 	u.Employment = scanu.Employment
 	u.SSOCert = scanu.SSOCert
+	u.FilesCount = scanu.FilesCount
 	return nil
 }
 
 // QueryCard queries the "card" edge of the User entity.
 func (u *User) QueryCard() *CardQuery {
-	return (&UserClient{config: u.config}).QueryCard(u)
+	return NewUserClient(u.config).QueryCard(u)
 }
 
 // QueryPets queries the "pets" edge of the User entity.
 func (u *User) QueryPets() *PetQuery {
-	return (&UserClient{config: u.config}).QueryPets(u)
+	return NewUserClient(u.config).QueryPets(u)
 }
 
 // QueryFiles queries the "files" edge of the User entity.
 func (u *User) QueryFiles() *FileQuery {
-	return (&UserClient{config: u.config}).QueryFiles(u)
+	return NewUserClient(u.config).QueryFiles(u)
 }
 
 // QueryGroups queries the "groups" edge of the User entity.
 func (u *User) QueryGroups() *GroupQuery {
-	return (&UserClient{config: u.config}).QueryGroups(u)
+	return NewUserClient(u.config).QueryGroups(u)
 }
 
 // QueryFriends queries the "friends" edge of the User entity.
 func (u *User) QueryFriends() *UserQuery {
-	return (&UserClient{config: u.config}).QueryFriends(u)
+	return NewUserClient(u.config).QueryFriends(u)
 }
 
 // QueryFollowers queries the "followers" edge of the User entity.
 func (u *User) QueryFollowers() *UserQuery {
-	return (&UserClient{config: u.config}).QueryFollowers(u)
+	return NewUserClient(u.config).QueryFollowers(u)
 }
 
 // QueryFollowing queries the "following" edge of the User entity.
 func (u *User) QueryFollowing() *UserQuery {
-	return (&UserClient{config: u.config}).QueryFollowing(u)
+	return NewUserClient(u.config).QueryFollowing(u)
 }
 
 // QueryTeam queries the "team" edge of the User entity.
 func (u *User) QueryTeam() *PetQuery {
-	return (&UserClient{config: u.config}).QueryTeam(u)
+	return NewUserClient(u.config).QueryTeam(u)
 }
 
 // QuerySpouse queries the "spouse" edge of the User entity.
 func (u *User) QuerySpouse() *UserQuery {
-	return (&UserClient{config: u.config}).QuerySpouse(u)
+	return NewUserClient(u.config).QuerySpouse(u)
 }
 
 // QueryChildren queries the "children" edge of the User entity.
 func (u *User) QueryChildren() *UserQuery {
-	return (&UserClient{config: u.config}).QueryChildren(u)
+	return NewUserClient(u.config).QueryChildren(u)
 }
 
 // QueryParent queries the "parent" edge of the User entity.
 func (u *User) QueryParent() *UserQuery {
-	return (&UserClient{config: u.config}).QueryParent(u)
+	return NewUserClient(u.config).QueryParent(u)
 }
 
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (u *User) Update() *UserUpdateOne {
-	return (&UserClient{config: u.config}).UpdateOne(u)
+	return NewUserClient(u.config).UpdateOne(u)
 }
 
 // Unwrap unwraps the User entity that was returned from a transaction after it was closed,
@@ -339,6 +343,9 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("SSOCert=")
 	builder.WriteString(u.SSOCert)
+	builder.WriteString(", ")
+	builder.WriteString("files_count=")
+	builder.WriteString(fmt.Sprintf("%v", u.FilesCount))
 	builder.WriteByte(')')
 	return builder.String()
 }
@@ -365,6 +372,7 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 		Role        user.Role       `json:"role,omitempty"`
 		Employment  user.Employment `json:"employment,omitempty"`
 		SSOCert     string          `json:"sso_cert,omitempty"`
+		FilesCount  int             `json:"files_count,omitempty"`
 	}
 	if err := vmap.Decode(&scanu); err != nil {
 		return err
@@ -382,13 +390,8 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 		node.Role = v.Role
 		node.Employment = v.Employment
 		node.SSOCert = v.SSOCert
+		node.FilesCount = v.FilesCount
 		*u = append(*u, node)
 	}
 	return nil
-}
-
-func (u Users) config(cfg config) {
-	for _i := range u {
-		u[_i].config = cfg
-	}
 }

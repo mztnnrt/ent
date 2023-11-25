@@ -31,7 +31,7 @@ func (cd *ConversionDelete) Where(ps ...predicate.Conversion) *ConversionDelete 
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *ConversionDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, ConversionMutation](ctx, cd.sqlExec, cd.mutation, cd.hooks)
+	return withHooks(ctx, cd.sqlExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (cd *ConversionDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *ConversionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: conversion.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: conversion.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(conversion.Table, sqlgraph.NewFieldSpec(conversion.FieldID, field.TypeInt))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type ConversionDeleteOne struct {
 	cd *ConversionDelete
 }
 
+// Where appends a list predicates to the ConversionDelete builder.
+func (cdo *ConversionDeleteOne) Where(ps ...predicate.Conversion) *ConversionDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *ConversionDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -88,5 +86,7 @@ func (cdo *ConversionDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *ConversionDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

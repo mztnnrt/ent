@@ -11,16 +11,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 
+	"entgo.io/ent"
 	"entgo.io/ent/entc/integration/cascadelete/ent/migrate"
-
-	"entgo.io/ent/entc/integration/cascadelete/ent/comment"
-	"entgo.io/ent/entc/integration/cascadelete/ent/post"
-	"entgo.io/ent/entc/integration/cascadelete/ent/user"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/entc/integration/cascadelete/ent/comment"
+	"entgo.io/ent/entc/integration/cascadelete/ent/post"
+	"entgo.io/ent/entc/integration/cascadelete/ent/user"
 )
 
 // Client is the client that holds all ent builders.
@@ -38,9 +39,7 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
-	cfg.options(opts...)
-	client := &Client{config: cfg}
+	client := &Client{config: newConfig(opts...)}
 	client.init()
 	return client
 }
@@ -50,6 +49,62 @@ func (c *Client) init() {
 	c.Comment = NewCommentClient(c.config)
 	c.Post = NewPostClient(c.config)
 	c.User = NewUserClient(c.config)
+}
+
+type (
+	// config is the configuration for the client and its builder.
+	config struct {
+		// driver used for executing database requests.
+		driver dialect.Driver
+		// debug enable a debug logging.
+		debug bool
+		// log used for logging on debug mode.
+		log func(...any)
+		// hooks to execute on mutations.
+		hooks *hooks
+		// interceptors to execute on queries.
+		inters *inters
+	}
+	// Option function to configure the client.
+	Option func(*config)
+)
+
+// newConfig creates a new config for the client.
+func newConfig(opts ...Option) config {
+	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
+	cfg.options(opts...)
+	return cfg
+}
+
+// options applies the options on the config object.
+func (c *config) options(opts ...Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.debug {
+		c.driver = dialect.Debug(c.driver, c.log)
+	}
+}
+
+// Debug enables debug logging on the ent.Driver.
+func Debug() Option {
+	return func(c *config) {
+		c.debug = true
+	}
+}
+
+// Log sets the logging function for debug mode.
+func Log(fn func(...any)) Option {
+	return func(c *config) {
+		c.log = fn
+	}
+}
+
+// Driver configures the client driver.
+func Driver(driver dialect.Driver) Option {
+	return func(c *config) {
+		c.driver = driver
+	}
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -68,11 +123,14 @@ func Open(driverName, dataSourceName string, options ...Option) (*Client, error)
 	}
 }
 
+// ErrTxStarted is returned when trying to start a new transaction from a transactional client.
+var ErrTxStarted = errors.New("ent: cannot start a transaction within a transaction")
+
 // Tx returns a new transactional client. The provided context
 // is used until the transaction is committed or rolled back.
 func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	if _, ok := c.driver.(*txDriver); ok {
-		return nil, errors.New("ent: cannot start a transaction within a transaction")
+		return nil, ErrTxStarted
 	}
 	tx, err := newTx(ctx, c.driver)
 	if err != nil {
@@ -179,7 +237,7 @@ func (c *CommentClient) Use(hooks ...Hook) {
 	c.hooks.Comment = append(c.hooks.Comment, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `comment.Intercept(f(g(h())))`.
 func (c *CommentClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Comment = append(c.inters.Comment, interceptors...)
@@ -193,6 +251,21 @@ func (c *CommentClient) Create() *CommentCreate {
 
 // CreateBulk returns a builder for creating a bulk of Comment entities.
 func (c *CommentClient) CreateBulk(builders ...*CommentCreate) *CommentCreateBulk {
+	return &CommentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CommentClient) MapCreateBulk(slice any, setFunc func(*CommentCreate, int)) *CommentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CommentCreateBulk{err: fmt.Errorf("calling to CommentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CommentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &CommentCreateBulk{config: c.config, builders: builders}
 }
 
@@ -237,6 +310,7 @@ func (c *CommentClient) DeleteOneID(id int) *CommentDeleteOne {
 func (c *CommentClient) Query() *CommentQuery {
 	return &CommentQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeComment},
 		inters: c.Interceptors(),
 	}
 }
@@ -312,7 +386,7 @@ func (c *PostClient) Use(hooks ...Hook) {
 	c.hooks.Post = append(c.hooks.Post, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `post.Intercept(f(g(h())))`.
 func (c *PostClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Post = append(c.inters.Post, interceptors...)
@@ -326,6 +400,21 @@ func (c *PostClient) Create() *PostCreate {
 
 // CreateBulk returns a builder for creating a bulk of Post entities.
 func (c *PostClient) CreateBulk(builders ...*PostCreate) *PostCreateBulk {
+	return &PostCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PostClient) MapCreateBulk(slice any, setFunc func(*PostCreate, int)) *PostCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PostCreateBulk{err: fmt.Errorf("calling to PostClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PostCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &PostCreateBulk{config: c.config, builders: builders}
 }
 
@@ -370,6 +459,7 @@ func (c *PostClient) DeleteOneID(id int) *PostDeleteOne {
 func (c *PostClient) Query() *PostQuery {
 	return &PostQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypePost},
 		inters: c.Interceptors(),
 	}
 }
@@ -461,7 +551,7 @@ func (c *UserClient) Use(hooks ...Hook) {
 	c.hooks.User = append(c.hooks.User, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `user.Intercept(f(g(h())))`.
 func (c *UserClient) Intercept(interceptors ...Interceptor) {
 	c.inters.User = append(c.inters.User, interceptors...)
@@ -475,6 +565,21 @@ func (c *UserClient) Create() *UserCreate {
 
 // CreateBulk returns a builder for creating a bulk of User entities.
 func (c *UserClient) CreateBulk(builders ...*UserCreate) *UserCreateBulk {
+	return &UserCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserClient) MapCreateBulk(slice any, setFunc func(*UserCreate, int)) *UserCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserCreateBulk{err: fmt.Errorf("calling to UserClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &UserCreateBulk{config: c.config, builders: builders}
 }
 
@@ -519,6 +624,7 @@ func (c *UserClient) DeleteOneID(id int) *UserDeleteOne {
 func (c *UserClient) Query() *UserQuery {
 	return &UserQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeUser},
 		inters: c.Interceptors(),
 	}
 }
@@ -577,3 +683,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 		return nil, fmt.Errorf("ent: unknown User mutation op: %q", m.Op())
 	}
 }
+
+// hooks and interceptors per client, for fast access.
+type (
+	hooks struct {
+		Comment, Post, User []ent.Hook
+	}
+	inters struct {
+		Comment, Post, User []ent.Interceptor
+	}
+)

@@ -30,7 +30,7 @@ func (rd *RelationshipDelete) Where(ps ...predicate.Relationship) *RelationshipD
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (rd *RelationshipDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, RelationshipMutation](ctx, rd.sqlExec, rd.mutation, rd.hooks)
+	return withHooks(ctx, rd.sqlExec, rd.mutation, rd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -43,11 +43,7 @@ func (rd *RelationshipDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *RelationshipDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: relationship.Table,
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(relationship.Table, nil)
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -68,6 +64,12 @@ type RelationshipDeleteOne struct {
 	rd *RelationshipDelete
 }
 
+// Where appends a list predicates to the RelationshipDelete builder.
+func (rdo *RelationshipDeleteOne) Where(ps ...predicate.Relationship) *RelationshipDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
+}
+
 // Exec executes the deletion query.
 func (rdo *RelationshipDeleteOne) Exec(ctx context.Context) error {
 	n, err := rdo.rd.Exec(ctx)
@@ -83,5 +85,7 @@ func (rdo *RelationshipDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *RelationshipDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

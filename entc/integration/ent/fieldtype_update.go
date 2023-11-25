@@ -1350,7 +1350,7 @@ func (ftu *FieldTypeUpdate) Mutation() *FieldTypeMutation {
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ftu *FieldTypeUpdate) Save(ctx context.Context) (int, error) {
 	ftu.defaults()
-	return withHooks[int, FieldTypeMutation](ctx, ftu.sqlSave, ftu.mutation, ftu.hooks)
+	return withHooks(ctx, ftu.sqlSave, ftu.mutation, ftu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -1451,16 +1451,7 @@ func (ftu *FieldTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ftu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   fieldtype.Table,
-			Columns: fieldtype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: fieldtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(fieldtype.Table, fieldtype.Columns, sqlgraph.NewFieldSpec(fieldtype.FieldID, field.TypeInt))
 	if ps := ftu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -3256,6 +3247,12 @@ func (ftuo *FieldTypeUpdateOne) Mutation() *FieldTypeMutation {
 	return ftuo.mutation
 }
 
+// Where appends a list predicates to the FieldTypeUpdate builder.
+func (ftuo *FieldTypeUpdateOne) Where(ps ...predicate.FieldType) *FieldTypeUpdateOne {
+	ftuo.mutation.Where(ps...)
+	return ftuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ftuo *FieldTypeUpdateOne) Select(field string, fields ...string) *FieldTypeUpdateOne {
@@ -3266,7 +3263,7 @@ func (ftuo *FieldTypeUpdateOne) Select(field string, fields ...string) *FieldTyp
 // Save executes the query and returns the updated FieldType entity.
 func (ftuo *FieldTypeUpdateOne) Save(ctx context.Context) (*FieldType, error) {
 	ftuo.defaults()
-	return withHooks[*FieldType, FieldTypeMutation](ctx, ftuo.sqlSave, ftuo.mutation, ftuo.hooks)
+	return withHooks(ctx, ftuo.sqlSave, ftuo.mutation, ftuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -3367,16 +3364,7 @@ func (ftuo *FieldTypeUpdateOne) sqlSave(ctx context.Context) (_node *FieldType, 
 	if err := ftuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   fieldtype.Table,
-			Columns: fieldtype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: fieldtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(fieldtype.Table, fieldtype.Columns, sqlgraph.NewFieldSpec(fieldtype.FieldID, field.TypeInt))
 	id, ok := ftuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FieldType.id" for update`)}

@@ -33,7 +33,7 @@ func (td *TaskDelete) Where(ps ...predicate.Task) *TaskDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (td *TaskDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, TaskMutation](ctx, td.gremlinExec, td.mutation, td.hooks)
+	return withHooks(ctx, td.gremlinExec, td.mutation, td.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -68,6 +68,12 @@ type TaskDeleteOne struct {
 	td *TaskDelete
 }
 
+// Where appends a list predicates to the TaskDelete builder.
+func (tdo *TaskDeleteOne) Where(ps ...predicate.Task) *TaskDeleteOne {
+	tdo.td.mutation.Where(ps...)
+	return tdo
+}
+
 // Exec executes the deletion query.
 func (tdo *TaskDeleteOne) Exec(ctx context.Context) error {
 	n, err := tdo.td.Exec(ctx)
@@ -83,5 +89,7 @@ func (tdo *TaskDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (tdo *TaskDeleteOne) ExecX(ctx context.Context) {
-	tdo.td.ExecX(ctx)
+	if err := tdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -12,11 +12,10 @@ import (
 	"fmt"
 	"sync"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/examples/fs/ent/file"
 	"entgo.io/ent/examples/fs/ent/predicate"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -272,6 +271,7 @@ func (m *FileMutation) ResetParentID() {
 // ClearParent clears the "parent" edge to the File entity.
 func (m *FileMutation) ClearParent() {
 	m.clearedparent = true
+	m.clearedFields[file.FieldParentID] = struct{}{}
 }
 
 // ParentCleared reports if the "parent" edge to the File entity was cleared.

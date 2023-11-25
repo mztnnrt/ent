@@ -45,7 +45,7 @@ func (lu *LinkUpdate) Mutation() *LinkMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (lu *LinkUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, LinkMutation](ctx, lu.sqlSave, lu.mutation, lu.hooks)
+	return withHooks(ctx, lu.sqlSave, lu.mutation, lu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -71,16 +71,7 @@ func (lu *LinkUpdate) ExecX(ctx context.Context) {
 }
 
 func (lu *LinkUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   link.Table,
-			Columns: link.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: link.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(link.Table, link.Columns, sqlgraph.NewFieldSpec(link.FieldID, field.TypeUUID))
 	if ps := lu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -122,6 +113,12 @@ func (luo *LinkUpdateOne) Mutation() *LinkMutation {
 	return luo.mutation
 }
 
+// Where appends a list predicates to the LinkUpdate builder.
+func (luo *LinkUpdateOne) Where(ps ...predicate.Link) *LinkUpdateOne {
+	luo.mutation.Where(ps...)
+	return luo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (luo *LinkUpdateOne) Select(field string, fields ...string) *LinkUpdateOne {
@@ -131,7 +128,7 @@ func (luo *LinkUpdateOne) Select(field string, fields ...string) *LinkUpdateOne 
 
 // Save executes the query and returns the updated Link entity.
 func (luo *LinkUpdateOne) Save(ctx context.Context) (*Link, error) {
-	return withHooks[*Link, LinkMutation](ctx, luo.sqlSave, luo.mutation, luo.hooks)
+	return withHooks(ctx, luo.sqlSave, luo.mutation, luo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -157,16 +154,7 @@ func (luo *LinkUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (luo *LinkUpdateOne) sqlSave(ctx context.Context) (_node *Link, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   link.Table,
-			Columns: link.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: link.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(link.Table, link.Columns, sqlgraph.NewFieldSpec(link.FieldID, field.TypeUUID))
 	id, ok := luo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Link.id" for update`)}

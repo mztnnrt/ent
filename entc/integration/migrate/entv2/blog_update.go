@@ -39,6 +39,14 @@ func (bu *BlogUpdate) SetOid(i int) *BlogUpdate {
 	return bu
 }
 
+// SetNillableOid sets the "oid" field if the given value is not nil.
+func (bu *BlogUpdate) SetNillableOid(i *int) *BlogUpdate {
+	if i != nil {
+		bu.SetOid(*i)
+	}
+	return bu
+}
+
 // AddOid adds i to the "oid" field.
 func (bu *BlogUpdate) AddOid(i int) *BlogUpdate {
 	bu.mutation.AddOid(i)
@@ -88,7 +96,7 @@ func (bu *BlogUpdate) RemoveAdmins(u ...*User) *BlogUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (bu *BlogUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, BlogMutation](ctx, bu.sqlSave, bu.mutation, bu.hooks)
+	return withHooks(ctx, bu.sqlSave, bu.mutation, bu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -114,16 +122,7 @@ func (bu *BlogUpdate) ExecX(ctx context.Context) {
 }
 
 func (bu *BlogUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   blog.Table,
-			Columns: blog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: blog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(blog.Table, blog.Columns, sqlgraph.NewFieldSpec(blog.FieldID, field.TypeInt))
 	if ps := bu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -145,10 +144,7 @@ func (bu *BlogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -161,10 +157,7 @@ func (bu *BlogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -180,10 +173,7 @@ func (bu *BlogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -215,6 +205,14 @@ type BlogUpdateOne struct {
 func (buo *BlogUpdateOne) SetOid(i int) *BlogUpdateOne {
 	buo.mutation.ResetOid()
 	buo.mutation.SetOid(i)
+	return buo
+}
+
+// SetNillableOid sets the "oid" field if the given value is not nil.
+func (buo *BlogUpdateOne) SetNillableOid(i *int) *BlogUpdateOne {
+	if i != nil {
+		buo.SetOid(*i)
+	}
 	return buo
 }
 
@@ -265,6 +263,12 @@ func (buo *BlogUpdateOne) RemoveAdmins(u ...*User) *BlogUpdateOne {
 	return buo.RemoveAdminIDs(ids...)
 }
 
+// Where appends a list predicates to the BlogUpdate builder.
+func (buo *BlogUpdateOne) Where(ps ...predicate.Blog) *BlogUpdateOne {
+	buo.mutation.Where(ps...)
+	return buo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (buo *BlogUpdateOne) Select(field string, fields ...string) *BlogUpdateOne {
@@ -274,7 +278,7 @@ func (buo *BlogUpdateOne) Select(field string, fields ...string) *BlogUpdateOne 
 
 // Save executes the query and returns the updated Blog entity.
 func (buo *BlogUpdateOne) Save(ctx context.Context) (*Blog, error) {
-	return withHooks[*Blog, BlogMutation](ctx, buo.sqlSave, buo.mutation, buo.hooks)
+	return withHooks(ctx, buo.sqlSave, buo.mutation, buo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -300,16 +304,7 @@ func (buo *BlogUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (buo *BlogUpdateOne) sqlSave(ctx context.Context) (_node *Blog, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   blog.Table,
-			Columns: blog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: blog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(blog.Table, blog.Columns, sqlgraph.NewFieldSpec(blog.FieldID, field.TypeInt))
 	id, ok := buo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`entv2: missing "Blog.id" for update`)}
@@ -348,10 +343,7 @@ func (buo *BlogUpdateOne) sqlSave(ctx context.Context) (_node *Blog, err error) 
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -364,10 +356,7 @@ func (buo *BlogUpdateOne) sqlSave(ctx context.Context) (_node *Blog, err error) 
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -383,10 +372,7 @@ func (buo *BlogUpdateOne) sqlSave(ctx context.Context) (_node *Blog, err error) 
 			Columns: []string{blog.AdminsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

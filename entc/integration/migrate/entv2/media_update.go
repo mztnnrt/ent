@@ -98,7 +98,7 @@ func (mu *MediaUpdate) Mutation() *MediaMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (mu *MediaUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, MediaMutation](ctx, mu.sqlSave, mu.mutation, mu.hooks)
+	return withHooks(ctx, mu.sqlSave, mu.mutation, mu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -124,16 +124,7 @@ func (mu *MediaUpdate) ExecX(ctx context.Context) {
 }
 
 func (mu *MediaUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   media.Table,
-			Columns: media.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: media.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(media.Table, media.Columns, sqlgraph.NewFieldSpec(media.FieldID, field.TypeInt))
 	if ps := mu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -244,6 +235,12 @@ func (muo *MediaUpdateOne) Mutation() *MediaMutation {
 	return muo.mutation
 }
 
+// Where appends a list predicates to the MediaUpdate builder.
+func (muo *MediaUpdateOne) Where(ps ...predicate.Media) *MediaUpdateOne {
+	muo.mutation.Where(ps...)
+	return muo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (muo *MediaUpdateOne) Select(field string, fields ...string) *MediaUpdateOne {
@@ -253,7 +250,7 @@ func (muo *MediaUpdateOne) Select(field string, fields ...string) *MediaUpdateOn
 
 // Save executes the query and returns the updated Media entity.
 func (muo *MediaUpdateOne) Save(ctx context.Context) (*Media, error) {
-	return withHooks[*Media, MediaMutation](ctx, muo.sqlSave, muo.mutation, muo.hooks)
+	return withHooks(ctx, muo.sqlSave, muo.mutation, muo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -279,16 +276,7 @@ func (muo *MediaUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (muo *MediaUpdateOne) sqlSave(ctx context.Context) (_node *Media, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   media.Table,
-			Columns: media.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: media.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(media.Table, media.Columns, sqlgraph.NewFieldSpec(media.FieldID, field.TypeInt))
 	id, ok := muo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`entv2: missing "Media.id" for update`)}

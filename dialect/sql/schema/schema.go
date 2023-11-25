@@ -30,12 +30,14 @@ const (
 // Table schema definition for SQL dialects.
 type Table struct {
 	Name        string
+	Schema      string
 	Columns     []*Column
 	columns     map[string]*Column
 	Indexes     []*Index
 	PrimaryKey  []*Column
 	ForeignKeys []*ForeignKey
 	Annotation  *entsql.Annotation
+	Comment     string
 }
 
 // NewTable returns a new table with the given name.
@@ -44,6 +46,18 @@ func NewTable(name string) *Table {
 		Name:    name,
 		columns: make(map[string]*Column),
 	}
+}
+
+// SetComment sets the table comment.
+func (t *Table) SetComment(c string) *Table {
+	t.Comment = c
+	return t
+}
+
+// SetSchema sets the table schema.
+func (t *Table) SetSchema(s string) *Table {
+	t.Schema = s
+	return t
 }
 
 // AddPrimary adds a new primary key to the table.
@@ -295,7 +309,7 @@ type Column struct {
 	typ        string            // row column type (used for Rows.Scan).
 	indexes    Indexes           // linked indexes.
 	foreign    *ForeignKey       // linked foreign-key.
-	Comment    string            // column comment.
+	Comment    string            // optional column comment.
 }
 
 // Expr represents a raw expression. It is used to distinguish between

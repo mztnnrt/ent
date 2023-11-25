@@ -99,7 +99,7 @@ func (ctu *CustomTypeUpdate) Mutation() *CustomTypeMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ctu *CustomTypeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CustomTypeMutation](ctx, ctu.sqlSave, ctu.mutation, ctu.hooks)
+	return withHooks(ctx, ctu.sqlSave, ctu.mutation, ctu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -125,16 +125,7 @@ func (ctu *CustomTypeUpdate) ExecX(ctx context.Context) {
 }
 
 func (ctu *CustomTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   customtype.Table,
-			Columns: customtype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: customtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(customtype.Table, customtype.Columns, sqlgraph.NewFieldSpec(customtype.FieldID, field.TypeInt))
 	if ps := ctu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -245,6 +236,12 @@ func (ctuo *CustomTypeUpdateOne) Mutation() *CustomTypeMutation {
 	return ctuo.mutation
 }
 
+// Where appends a list predicates to the CustomTypeUpdate builder.
+func (ctuo *CustomTypeUpdateOne) Where(ps ...predicate.CustomType) *CustomTypeUpdateOne {
+	ctuo.mutation.Where(ps...)
+	return ctuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ctuo *CustomTypeUpdateOne) Select(field string, fields ...string) *CustomTypeUpdateOne {
@@ -254,7 +251,7 @@ func (ctuo *CustomTypeUpdateOne) Select(field string, fields ...string) *CustomT
 
 // Save executes the query and returns the updated CustomType entity.
 func (ctuo *CustomTypeUpdateOne) Save(ctx context.Context) (*CustomType, error) {
-	return withHooks[*CustomType, CustomTypeMutation](ctx, ctuo.sqlSave, ctuo.mutation, ctuo.hooks)
+	return withHooks(ctx, ctuo.sqlSave, ctuo.mutation, ctuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -280,16 +277,7 @@ func (ctuo *CustomTypeUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ctuo *CustomTypeUpdateOne) sqlSave(ctx context.Context) (_node *CustomType, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   customtype.Table,
-			Columns: customtype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: customtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(customtype.Table, customtype.Columns, sqlgraph.NewFieldSpec(customtype.FieldID, field.TypeInt))
 	id, ok := ctuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`entv2: missing "CustomType.id" for update`)}

@@ -39,7 +39,7 @@ func (rc *RevisionCreate) Mutation() *RevisionMutation {
 
 // Save creates the Revision in the database.
 func (rc *RevisionCreate) Save(ctx context.Context) (*Revision, error) {
-	return withHooks[*Revision, RevisionMutation](ctx, rc.sqlSave, rc.mutation, rc.hooks)
+	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -95,13 +95,7 @@ func (rc *RevisionCreate) sqlSave(ctx context.Context) (*Revision, error) {
 func (rc *RevisionCreate) createSpec() (*Revision, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Revision{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: revision.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: revision.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(revision.Table, sqlgraph.NewFieldSpec(revision.FieldID, field.TypeString))
 	)
 	_spec.OnConflict = rc.conflict
 	if id, ok := rc.mutation.ID(); ok {
@@ -243,12 +237,16 @@ func (u *RevisionUpsertOne) IDX(ctx context.Context) string {
 // RevisionCreateBulk is the builder for creating many Revision entities in bulk.
 type RevisionCreateBulk struct {
 	config
+	err      error
 	builders []*RevisionCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Revision entities in the database.
 func (rcb *RevisionCreateBulk) Save(ctx context.Context) ([]*Revision, error) {
+	if rcb.err != nil {
+		return nil, rcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rcb.builders))
 	nodes := make([]*Revision, len(rcb.builders))
 	mutators := make([]Mutator, len(rcb.builders))
@@ -264,8 +262,8 @@ func (rcb *RevisionCreateBulk) Save(ctx context.Context) ([]*Revision, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, rcb.builders[i+1].mutation)
 				} else {
@@ -409,6 +407,9 @@ func (u *RevisionUpsertBulk) Update(set func(*RevisionUpsert)) *RevisionUpsertBu
 
 // Exec executes the query.
 func (u *RevisionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the RevisionCreateBulk instead", i)

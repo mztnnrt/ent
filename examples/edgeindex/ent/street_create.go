@@ -56,7 +56,7 @@ func (sc *StreetCreate) Mutation() *StreetMutation {
 
 // Save creates the Street in the database.
 func (sc *StreetCreate) Save(ctx context.Context) (*Street, error) {
-	return withHooks[*Street, StreetMutation](ctx, sc.sqlSave, sc.mutation, sc.hooks)
+	return withHooks(ctx, sc.sqlSave, sc.mutation, sc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -110,13 +110,7 @@ func (sc *StreetCreate) sqlSave(ctx context.Context) (*Street, error) {
 func (sc *StreetCreate) createSpec() (*Street, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Street{config: sc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: street.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: street.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(street.Table, sqlgraph.NewFieldSpec(street.FieldID, field.TypeInt))
 	)
 	if value, ok := sc.mutation.Name(); ok {
 		_spec.SetField(street.FieldName, field.TypeString, value)
@@ -130,10 +124,7 @@ func (sc *StreetCreate) createSpec() (*Street, *sqlgraph.CreateSpec) {
 			Columns: []string{street.CityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: city.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -148,11 +139,15 @@ func (sc *StreetCreate) createSpec() (*Street, *sqlgraph.CreateSpec) {
 // StreetCreateBulk is the builder for creating many Street entities in bulk.
 type StreetCreateBulk struct {
 	config
+	err      error
 	builders []*StreetCreate
 }
 
 // Save creates the Street entities in the database.
 func (scb *StreetCreateBulk) Save(ctx context.Context) ([]*Street, error) {
+	if scb.err != nil {
+		return nil, scb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(scb.builders))
 	nodes := make([]*Street, len(scb.builders))
 	mutators := make([]Mutator, len(scb.builders))
@@ -168,8 +163,8 @@ func (scb *StreetCreateBulk) Save(ctx context.Context) ([]*Street, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, scb.builders[i+1].mutation)
 				} else {

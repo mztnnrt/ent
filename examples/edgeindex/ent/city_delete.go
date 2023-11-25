@@ -31,7 +31,7 @@ func (cd *CityDelete) Where(ps ...predicate.City) *CityDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *CityDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, CityMutation](ctx, cd.sqlExec, cd.mutation, cd.hooks)
+	return withHooks(ctx, cd.sqlExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (cd *CityDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *CityDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: city.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: city.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(city.Table, sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type CityDeleteOne struct {
 	cd *CityDelete
 }
 
+// Where appends a list predicates to the CityDelete builder.
+func (cdo *CityDeleteOne) Where(ps ...predicate.City) *CityDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *CityDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -88,5 +86,7 @@ func (cdo *CityDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CityDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/entc/integration/edgefield/ent/car"
 	"entgo.io/ent/entc/integration/edgefield/ent/card"
@@ -26,8 +27,6 @@ import (
 	"entgo.io/ent/entc/integration/edgefield/ent/rental"
 	"entgo.io/ent/entc/integration/edgefield/ent/user"
 	"github.com/google/uuid"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -711,6 +710,7 @@ func (m *CardMutation) ResetOwnerID() {
 // ClearOwner clears the "owner" edge to the User entity.
 func (m *CardMutation) ClearOwner() {
 	m.clearedowner = true
+	m.clearedFields[card.FieldOwnerID] = struct{}{}
 }
 
 // OwnerCleared reports if the "owner" edge to the User entity was cleared.
@@ -1715,6 +1715,7 @@ func (m *MetadataMutation) ResetChildren() {
 // ClearParent clears the "parent" edge to the Metadata entity.
 func (m *MetadataMutation) ClearParent() {
 	m.clearedparent = true
+	m.clearedFields[metadata.FieldParentID] = struct{}{}
 }
 
 // ParentCleared reports if the "parent" edge to the Metadata entity was cleared.
@@ -2254,6 +2255,7 @@ func (m *NodeMutation) ResetPrevID() {
 // ClearPrev clears the "prev" edge to the Node entity.
 func (m *NodeMutation) ClearPrev() {
 	m.clearedprev = true
+	m.clearedFields[node.FieldPrevID] = struct{}{}
 }
 
 // PrevCleared reports if the "prev" edge to the Node entity was cleared.
@@ -2744,6 +2746,7 @@ func (m *PetMutation) ResetOwnerID() {
 // ClearOwner clears the "owner" edge to the User entity.
 func (m *PetMutation) ClearOwner() {
 	m.clearedowner = true
+	m.clearedFields[pet.FieldOwnerID] = struct{}{}
 }
 
 // OwnerCleared reports if the "owner" edge to the User entity was cleared.
@@ -3185,6 +3188,7 @@ func (m *PostMutation) ResetAuthorID() {
 // ClearAuthor clears the "author" edge to the User entity.
 func (m *PostMutation) ClearAuthor() {
 	m.clearedauthor = true
+	m.clearedFields[post.FieldAuthorID] = struct{}{}
 }
 
 // AuthorCleared reports if the "author" edge to the User entity was cleared.
@@ -3668,6 +3672,7 @@ func (m *RentalMutation) ResetCarID() {
 // ClearUser clears the "user" edge to the User entity.
 func (m *RentalMutation) ClearUser() {
 	m.cleareduser = true
+	m.clearedFields[rental.FieldUserID] = struct{}{}
 }
 
 // UserCleared reports if the "user" edge to the User entity was cleared.
@@ -3694,6 +3699,7 @@ func (m *RentalMutation) ResetUser() {
 // ClearCar clears the "car" edge to the Car entity.
 func (m *RentalMutation) ClearCar() {
 	m.clearedcar = true
+	m.clearedFields[rental.FieldCarID] = struct{}{}
 }
 
 // CarCleared reports if the "car" edge to the Car entity was cleared.
@@ -4268,6 +4274,7 @@ func (m *UserMutation) ResetPets() {
 // ClearParent clears the "parent" edge to the User entity.
 func (m *UserMutation) ClearParent() {
 	m.clearedparent = true
+	m.clearedFields[user.FieldParentID] = struct{}{}
 }
 
 // ParentCleared reports if the "parent" edge to the User entity was cleared.
@@ -4348,6 +4355,7 @@ func (m *UserMutation) ResetChildren() {
 // ClearSpouse clears the "spouse" edge to the User entity.
 func (m *UserMutation) ClearSpouse() {
 	m.clearedspouse = true
+	m.clearedFields[user.FieldSpouseID] = struct{}{}
 }
 
 // SpouseCleared reports if the "spouse" edge to the User entity was cleared.

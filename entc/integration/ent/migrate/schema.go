@@ -13,6 +13,26 @@ import (
 )
 
 var (
+	// ApisColumns holds the columns for the "apis" table.
+	ApisColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// ApisTable holds the schema information for the "apis" table.
+	ApisTable = &schema.Table{
+		Name:       "apis",
+		Columns:    ApisColumns,
+		PrimaryKey: []*schema.Column{ApisColumns[0]},
+	}
+	// BuildersColumns holds the columns for the "builders" table.
+	BuildersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// BuildersTable holds the schema information for the "builders" table.
+	BuildersTable = &schema.Table{
+		Name:       "builders",
+		Columns:    BuildersColumns,
+		PrimaryKey: []*schema.Column{BuildersColumns[0]},
+	}
 	// CardsColumns holds the columns for the "cards" table.
 	CardsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -69,6 +89,23 @@ var (
 		Name:       "comments",
 		Columns:    CommentsColumns,
 		PrimaryKey: []*schema.Column{CommentsColumns[0]},
+	}
+	// ExValueScansColumns holds the columns for the "ex_value_scans" table.
+	ExValueScansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "binary", Type: field.TypeString},
+		{Name: "binary_optional", Type: field.TypeString, Nullable: true},
+		{Name: "text", Type: field.TypeString},
+		{Name: "text_optional", Type: field.TypeString, Nullable: true},
+		{Name: "base64", Type: field.TypeString},
+		{Name: "custom", Type: field.TypeString},
+		{Name: "custom_optional", Type: field.TypeString, Nullable: true},
+	}
+	// ExValueScansTable holds the schema information for the "ex_value_scans" table.
+	ExValueScansTable = &schema.Table{
+		Name:       "ex_value_scans",
+		Columns:    ExValueScansColumns,
+		PrimaryKey: []*schema.Column{ExValueScansColumns[0]},
 	}
 	// FieldTypesColumns holds the columns for the "field_types" table.
 	FieldTypesColumns = []*schema.Column{
@@ -306,6 +343,7 @@ var (
 	NodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "value", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_at", Type: field.TypeTime, Nullable: true},
 		{Name: "node_next", Type: field.TypeInt, Unique: true, Nullable: true},
 	}
 	// NodesTable holds the schema information for the "nodes" table.
@@ -316,11 +354,21 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "nodes_nodes_next",
-				Columns:    []*schema.Column{NodesColumns[2]},
+				Columns:    []*schema.Column{NodesColumns[3]},
 				RefColumns: []*schema.Column{NodesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
+	}
+	// PcsColumns holds the columns for the "pcs" table.
+	PcsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// PcsTable holds the schema information for the "pcs" table.
+	PcsTable = &schema.Table{
+		Name:       "pcs",
+		Columns:    PcsColumns,
+		PrimaryKey: []*schema.Column{PcsColumns[0]},
 	}
 	// PetColumns holds the columns for the "pet" table.
 	PetColumns = []*schema.Column{
@@ -381,12 +429,24 @@ var (
 		{Name: "priority", Type: field.TypeInt, Default: 1},
 		{Name: "priorities", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Nullable: true},
+		{Name: "owner", Type: field.TypeString, Nullable: true},
+		{Name: "order", Type: field.TypeInt, Nullable: true},
+		{Name: "order_option", Type: field.TypeInt, Nullable: true},
+		{Name: "op", Type: field.TypeString, Size: 45, Default: ""},
 	}
 	// TasksTable holds the schema information for the "tasks" table.
 	TasksTable = &schema.Table{
 		Name:       "tasks",
 		Columns:    TasksColumns,
 		PrimaryKey: []*schema.Column{TasksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "task_name_owner",
+				Unique:  true,
+				Columns: []*schema.Column{TasksColumns[4], TasksColumns[5]},
+			},
+		},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -402,6 +462,7 @@ var (
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"user", "admin", "free-user", "test user"}, Default: "user"},
 		{Name: "employment", Type: field.TypeEnum, Enums: []string{"Full-Time", "Part-Time", "Contract"}, Default: "Full-Time"},
 		{Name: "sso_cert", Type: field.TypeString, Nullable: true},
+		{Name: "files_count", Type: field.TypeInt, Nullable: true},
 		{Name: "group_blocked", Type: field.TypeInt, Nullable: true},
 		{Name: "user_spouse", Type: field.TypeInt, Unique: true, Nullable: true},
 		{Name: "user_parent", Type: field.TypeInt, Nullable: true},
@@ -414,19 +475,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_groups_blocked",
-				Columns:    []*schema.Column{UsersColumns[12]},
+				Columns:    []*schema.Column{UsersColumns[13]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_users_spouse",
-				Columns:    []*schema.Column{UsersColumns[13]},
+				Columns:    []*schema.Column{UsersColumns[14]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "users_users_parent",
-				Columns:    []*schema.Column{UsersColumns[14]},
+				Columns:    []*schema.Column{UsersColumns[15]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -534,8 +595,11 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ApisTable,
+		BuildersTable,
 		CardsTable,
 		CommentsTable,
+		ExValueScansTable,
 		FieldTypesTable,
 		FilesTable,
 		FileTypesTable,
@@ -545,6 +609,7 @@ var (
 		ItemsTable,
 		LicensesTable,
 		NodesTable,
+		PcsTable,
 		PetTable,
 		SpecsTable,
 		TasksTable,

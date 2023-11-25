@@ -74,7 +74,7 @@ func (tlc *TweetLikeCreate) Save(ctx context.Context) (*TweetLike, error) {
 	if err := tlc.defaults(); err != nil {
 		return nil, err
 	}
-	return withHooks[*TweetLike, TweetLikeMutation](ctx, tlc.sqlSave, tlc.mutation, tlc.hooks)
+	return withHooks(ctx, tlc.sqlSave, tlc.mutation, tlc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -148,9 +148,7 @@ func (tlc *TweetLikeCreate) sqlSave(ctx context.Context) (*TweetLike, error) {
 func (tlc *TweetLikeCreate) createSpec() (*TweetLike, *sqlgraph.CreateSpec) {
 	var (
 		_node = &TweetLike{config: tlc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: tweetlike.Table,
-		}
+		_spec = sqlgraph.NewCreateSpec(tweetlike.Table, nil)
 	)
 	_spec.OnConflict = tlc.conflict
 	if value, ok := tlc.mutation.LikedAt(); ok {
@@ -165,10 +163,7 @@ func (tlc *TweetLikeCreate) createSpec() (*TweetLike, *sqlgraph.CreateSpec) {
 			Columns: []string{tweetlike.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -185,10 +180,7 @@ func (tlc *TweetLikeCreate) createSpec() (*TweetLike, *sqlgraph.CreateSpec) {
 			Columns: []string{tweetlike.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -385,12 +377,16 @@ func (u *TweetLikeUpsertOne) ExecX(ctx context.Context) {
 // TweetLikeCreateBulk is the builder for creating many TweetLike entities in bulk.
 type TweetLikeCreateBulk struct {
 	config
+	err      error
 	builders []*TweetLikeCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the TweetLike entities in the database.
 func (tlcb *TweetLikeCreateBulk) Save(ctx context.Context) ([]*TweetLike, error) {
+	if tlcb.err != nil {
+		return nil, tlcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(tlcb.builders))
 	nodes := make([]*TweetLike, len(tlcb.builders))
 	mutators := make([]Mutator, len(tlcb.builders))
@@ -407,8 +403,8 @@ func (tlcb *TweetLikeCreateBulk) Save(ctx context.Context) ([]*TweetLike, error)
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, tlcb.builders[i+1].mutation)
 				} else {
@@ -588,6 +584,9 @@ func (u *TweetLikeUpsertBulk) UpdateTweetID() *TweetLikeUpsertBulk {
 
 // Exec executes the query.
 func (u *TweetLikeUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TweetLikeCreateBulk instead", i)

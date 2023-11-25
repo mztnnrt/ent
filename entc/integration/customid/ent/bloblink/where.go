@@ -124,11 +124,7 @@ func HasBlob() predicate.BlobLink {
 // HasBlobWith applies the HasEdge predicate on the "blob" edge with a given conditions (other predicates).
 func HasBlobWith(preds ...predicate.Blob) predicate.BlobLink {
 	return predicate.BlobLink(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, BlobColumn),
-			sqlgraph.To(BlobInverseTable, BlobFieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, BlobTable, BlobColumn),
-		)
+		step := newBlobStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -151,11 +147,7 @@ func HasLink() predicate.BlobLink {
 // HasLinkWith applies the HasEdge predicate on the "link" edge with a given conditions (other predicates).
 func HasLinkWith(preds ...predicate.Blob) predicate.BlobLink {
 	return predicate.BlobLink(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, LinkColumn),
-			sqlgraph.To(LinkInverseTable, BlobFieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, LinkTable, LinkColumn),
-		)
+		step := newLinkStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -166,32 +158,15 @@ func HasLinkWith(preds ...predicate.Blob) predicate.BlobLink {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.BlobLink) predicate.BlobLink {
-	return predicate.BlobLink(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.BlobLink(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.BlobLink) predicate.BlobLink {
-	return predicate.BlobLink(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.BlobLink(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.BlobLink) predicate.BlobLink {
-	return predicate.BlobLink(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.BlobLink(sql.NotPredicates(p))
 }

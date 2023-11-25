@@ -135,7 +135,7 @@ func (bu *BlobUpdate) RemoveLinks(b ...*Blob) *BlobUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (bu *BlobUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, BlobMutation](ctx, bu.sqlSave, bu.mutation, bu.hooks)
+	return withHooks(ctx, bu.sqlSave, bu.mutation, bu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -161,16 +161,7 @@ func (bu *BlobUpdate) ExecX(ctx context.Context) {
 }
 
 func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   blob.Table,
-			Columns: blob.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: blob.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(blob.Table, blob.Columns, sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID))
 	if ps := bu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -195,10 +186,7 @@ func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{blob.ParentColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -211,10 +199,7 @@ func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{blob.ParentColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -230,10 +215,7 @@ func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		createE := &BlobLinkCreate{config: bu.config, mutation: newBlobLinkMutation(bu.config, OpCreate)}
@@ -250,10 +232,7 @@ func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -273,10 +252,7 @@ func (bu *BlobUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -409,6 +385,12 @@ func (buo *BlobUpdateOne) RemoveLinks(b ...*Blob) *BlobUpdateOne {
 	return buo.RemoveLinkIDs(ids...)
 }
 
+// Where appends a list predicates to the BlobUpdate builder.
+func (buo *BlobUpdateOne) Where(ps ...predicate.Blob) *BlobUpdateOne {
+	buo.mutation.Where(ps...)
+	return buo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (buo *BlobUpdateOne) Select(field string, fields ...string) *BlobUpdateOne {
@@ -418,7 +400,7 @@ func (buo *BlobUpdateOne) Select(field string, fields ...string) *BlobUpdateOne 
 
 // Save executes the query and returns the updated Blob entity.
 func (buo *BlobUpdateOne) Save(ctx context.Context) (*Blob, error) {
-	return withHooks[*Blob, BlobMutation](ctx, buo.sqlSave, buo.mutation, buo.hooks)
+	return withHooks(ctx, buo.sqlSave, buo.mutation, buo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -444,16 +426,7 @@ func (buo *BlobUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   blob.Table,
-			Columns: blob.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: blob.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(blob.Table, blob.Columns, sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID))
 	id, ok := buo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Blob.id" for update`)}
@@ -495,10 +468,7 @@ func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) 
 			Columns: []string{blob.ParentColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -511,10 +481,7 @@ func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) 
 			Columns: []string{blob.ParentColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -530,10 +497,7 @@ func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) 
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		createE := &BlobLinkCreate{config: buo.config, mutation: newBlobLinkMutation(buo.config, OpCreate)}
@@ -550,10 +514,7 @@ func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) 
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -573,10 +534,7 @@ func (buo *BlobUpdateOne) sqlSave(ctx context.Context) (_node *Blob, err error) 
 			Columns: blob.LinksPrimaryKey,
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

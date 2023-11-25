@@ -13,6 +13,30 @@ import (
 	"entgo.io/ent/entc/integration/gremlin/ent"
 )
 
+// The ApiFunc type is an adapter to allow the use of ordinary
+// function as Api mutator.
+type ApiFunc func(context.Context, *ent.APIMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ApiFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.APIMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.APIMutation", m)
+}
+
+// The BuilderFunc type is an adapter to allow the use of ordinary
+// function as Builder mutator.
+type BuilderFunc func(context.Context, *ent.BuilderMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BuilderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BuilderMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BuilderMutation", m)
+}
+
 // The CardFunc type is an adapter to allow the use of ordinary
 // function as Card mutator.
 type CardFunc func(context.Context, *ent.CardMutation) (ent.Value, error)
@@ -35,6 +59,18 @@ func (f CommentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CommentMutation", m)
+}
+
+// The ExValueScanFunc type is an adapter to allow the use of ordinary
+// function as ExValueScan mutator.
+type ExValueScanFunc func(context.Context, *ent.ExValueScanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ExValueScanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ExValueScanMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ExValueScanMutation", m)
 }
 
 // The FieldTypeFunc type is an adapter to allow the use of ordinary
@@ -143,6 +179,18 @@ func (f NodeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.NodeMutation", m)
+}
+
+// The PCFunc type is an adapter to allow the use of ordinary
+// function as PC mutator.
+type PCFunc func(context.Context, *ent.PCMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PCFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PCMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PCMutation", m)
 }
 
 // The PetFunc type is an adapter to allow the use of ordinary

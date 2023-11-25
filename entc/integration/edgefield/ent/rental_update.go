@@ -53,7 +53,7 @@ func (ru *RentalUpdate) Mutation() *RentalMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ru *RentalUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, RentalMutation](ctx, ru.sqlSave, ru.mutation, ru.hooks)
+	return withHooks(ctx, ru.sqlSave, ru.mutation, ru.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -93,16 +93,7 @@ func (ru *RentalUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ru.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   rental.Table,
-			Columns: rental.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: rental.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(rental.Table, rental.Columns, sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -152,6 +143,12 @@ func (ruo *RentalUpdateOne) Mutation() *RentalMutation {
 	return ruo.mutation
 }
 
+// Where appends a list predicates to the RentalUpdate builder.
+func (ruo *RentalUpdateOne) Where(ps ...predicate.Rental) *RentalUpdateOne {
+	ruo.mutation.Where(ps...)
+	return ruo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruo *RentalUpdateOne) Select(field string, fields ...string) *RentalUpdateOne {
@@ -161,7 +158,7 @@ func (ruo *RentalUpdateOne) Select(field string, fields ...string) *RentalUpdate
 
 // Save executes the query and returns the updated Rental entity.
 func (ruo *RentalUpdateOne) Save(ctx context.Context) (*Rental, error) {
-	return withHooks[*Rental, RentalMutation](ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
+	return withHooks(ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -201,16 +198,7 @@ func (ruo *RentalUpdateOne) sqlSave(ctx context.Context) (_node *Rental, err err
 	if err := ruo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   rental.Table,
-			Columns: rental.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: rental.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(rental.Table, rental.Columns, sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Rental.id" for update`)}

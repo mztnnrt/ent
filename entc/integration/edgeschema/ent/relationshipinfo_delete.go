@@ -31,7 +31,7 @@ func (rid *RelationshipInfoDelete) Where(ps ...predicate.RelationshipInfo) *Rela
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (rid *RelationshipInfoDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, RelationshipInfoMutation](ctx, rid.sqlExec, rid.mutation, rid.hooks)
+	return withHooks(ctx, rid.sqlExec, rid.mutation, rid.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (rid *RelationshipInfoDelete) ExecX(ctx context.Context) int {
 }
 
 func (rid *RelationshipInfoDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: relationshipinfo.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: relationshipinfo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(relationshipinfo.Table, sqlgraph.NewFieldSpec(relationshipinfo.FieldID, field.TypeInt))
 	if ps := rid.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type RelationshipInfoDeleteOne struct {
 	rid *RelationshipInfoDelete
 }
 
+// Where appends a list predicates to the RelationshipInfoDelete builder.
+func (rido *RelationshipInfoDeleteOne) Where(ps ...predicate.RelationshipInfo) *RelationshipInfoDeleteOne {
+	rido.rid.mutation.Where(ps...)
+	return rido
+}
+
 // Exec executes the deletion query.
 func (rido *RelationshipInfoDeleteOne) Exec(ctx context.Context) error {
 	n, err := rido.rid.Exec(ctx)
@@ -88,5 +86,7 @@ func (rido *RelationshipInfoDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rido *RelationshipInfoDeleteOne) ExecX(ctx context.Context) {
-	rido.rid.ExecX(ctx)
+	if err := rido.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

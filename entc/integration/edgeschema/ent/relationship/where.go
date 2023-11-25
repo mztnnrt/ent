@@ -156,11 +156,7 @@ func HasUser() predicate.Relationship {
 // HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
 func HasUserWith(preds ...predicate.User) predicate.Relationship {
 	return predicate.Relationship(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, UserColumn),
-			sqlgraph.To(UserInverseTable, UserFieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, UserTable, UserColumn),
-		)
+		step := newUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -183,11 +179,7 @@ func HasRelative() predicate.Relationship {
 // HasRelativeWith applies the HasEdge predicate on the "relative" edge with a given conditions (other predicates).
 func HasRelativeWith(preds ...predicate.User) predicate.Relationship {
 	return predicate.Relationship(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, RelativeColumn),
-			sqlgraph.To(RelativeInverseTable, UserFieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, RelativeTable, RelativeColumn),
-		)
+		step := newRelativeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -210,11 +202,7 @@ func HasInfo() predicate.Relationship {
 // HasInfoWith applies the HasEdge predicate on the "info" edge with a given conditions (other predicates).
 func HasInfoWith(preds ...predicate.RelationshipInfo) predicate.Relationship {
 	return predicate.Relationship(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, InfoColumn),
-			sqlgraph.To(InfoInverseTable, RelationshipInfoFieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, InfoTable, InfoColumn),
-		)
+		step := newInfoStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -225,32 +213,15 @@ func HasInfoWith(preds ...predicate.RelationshipInfo) predicate.Relationship {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Relationship) predicate.Relationship {
-	return predicate.Relationship(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Relationship(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Relationship) predicate.Relationship {
-	return predicate.Relationship(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Relationship(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Relationship) predicate.Relationship {
-	return predicate.Relationship(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Relationship(sql.NotPredicates(p))
 }

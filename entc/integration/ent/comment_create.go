@@ -101,7 +101,7 @@ func (cc *CommentCreate) Mutation() *CommentMutation {
 
 // Save creates the Comment in the database.
 func (cc *CommentCreate) Save(ctx context.Context) (*Comment, error) {
-	return withHooks[*Comment, CommentMutation](ctx, cc.sqlSave, cc.mutation, cc.hooks)
+	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -158,13 +158,7 @@ func (cc *CommentCreate) sqlSave(ctx context.Context) (*Comment, error) {
 func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Comment{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: comment.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: comment.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(comment.Table, sqlgraph.NewFieldSpec(comment.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = cc.conflict
 	if value, ok := cc.mutation.UniqueInt(); ok {
@@ -566,12 +560,16 @@ func (u *CommentUpsertOne) IDX(ctx context.Context) int {
 // CommentCreateBulk is the builder for creating many Comment entities in bulk.
 type CommentCreateBulk struct {
 	config
+	err      error
 	builders []*CommentCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Comment entities in the database.
 func (ccb *CommentCreateBulk) Save(ctx context.Context) ([]*Comment, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Comment, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))
@@ -587,8 +585,8 @@ func (ccb *CommentCreateBulk) Save(ctx context.Context) ([]*Comment, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ccb.builders[i+1].mutation)
 				} else {
@@ -864,6 +862,9 @@ func (u *CommentUpsertBulk) ClearClient() *CommentUpsertBulk {
 
 // Exec executes the query.
 func (u *CommentUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the CommentCreateBulk instead", i)

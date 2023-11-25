@@ -72,7 +72,7 @@ func (blc *BlobLinkCreate) Mutation() *BlobLinkMutation {
 // Save creates the BlobLink in the database.
 func (blc *BlobLinkCreate) Save(ctx context.Context) (*BlobLink, error) {
 	blc.defaults()
-	return withHooks[*BlobLink, BlobLinkMutation](ctx, blc.sqlSave, blc.mutation, blc.hooks)
+	return withHooks(ctx, blc.sqlSave, blc.mutation, blc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -142,9 +142,7 @@ func (blc *BlobLinkCreate) sqlSave(ctx context.Context) (*BlobLink, error) {
 func (blc *BlobLinkCreate) createSpec() (*BlobLink, *sqlgraph.CreateSpec) {
 	var (
 		_node = &BlobLink{config: blc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: bloblink.Table,
-		}
+		_spec = sqlgraph.NewCreateSpec(bloblink.Table, nil)
 	)
 	_spec.OnConflict = blc.conflict
 	if value, ok := blc.mutation.CreatedAt(); ok {
@@ -159,10 +157,7 @@ func (blc *BlobLinkCreate) createSpec() (*BlobLink, *sqlgraph.CreateSpec) {
 			Columns: []string{bloblink.BlobColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -179,10 +174,7 @@ func (blc *BlobLinkCreate) createSpec() (*BlobLink, *sqlgraph.CreateSpec) {
 			Columns: []string{bloblink.LinkColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: blob.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -379,12 +371,16 @@ func (u *BlobLinkUpsertOne) ExecX(ctx context.Context) {
 // BlobLinkCreateBulk is the builder for creating many BlobLink entities in bulk.
 type BlobLinkCreateBulk struct {
 	config
+	err      error
 	builders []*BlobLinkCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the BlobLink entities in the database.
 func (blcb *BlobLinkCreateBulk) Save(ctx context.Context) ([]*BlobLink, error) {
+	if blcb.err != nil {
+		return nil, blcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(blcb.builders))
 	nodes := make([]*BlobLink, len(blcb.builders))
 	mutators := make([]Mutator, len(blcb.builders))
@@ -401,8 +397,8 @@ func (blcb *BlobLinkCreateBulk) Save(ctx context.Context) ([]*BlobLink, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, blcb.builders[i+1].mutation)
 				} else {
@@ -582,6 +578,9 @@ func (u *BlobLinkUpsertBulk) UpdateLinkID() *BlobLinkUpsertBulk {
 
 // Exec executes the query.
 func (u *BlobLinkUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the BlobLinkCreateBulk instead", i)

@@ -84,7 +84,7 @@ func (dc *DeviceCreate) Mutation() *DeviceMutation {
 // Save creates the Device in the database.
 func (dc *DeviceCreate) Save(ctx context.Context) (*Device, error) {
 	dc.defaults()
-	return withHooks[*Device, DeviceMutation](ctx, dc.sqlSave, dc.mutation, dc.hooks)
+	return withHooks(ctx, dc.sqlSave, dc.mutation, dc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -153,13 +153,7 @@ func (dc *DeviceCreate) sqlSave(ctx context.Context) (*Device, error) {
 func (dc *DeviceCreate) createSpec() (*Device, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Device{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: device.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeBytes,
-				Column: device.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(device.Table, sqlgraph.NewFieldSpec(device.FieldID, field.TypeBytes))
 	)
 	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
@@ -174,10 +168,7 @@ func (dc *DeviceCreate) createSpec() (*Device, *sqlgraph.CreateSpec) {
 			Columns: []string{device.ActiveSessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -194,10 +185,7 @@ func (dc *DeviceCreate) createSpec() (*Device, *sqlgraph.CreateSpec) {
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -340,12 +328,16 @@ func (u *DeviceUpsertOne) IDX(ctx context.Context) schema.ID {
 // DeviceCreateBulk is the builder for creating many Device entities in bulk.
 type DeviceCreateBulk struct {
 	config
+	err      error
 	builders []*DeviceCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Device entities in the database.
 func (dcb *DeviceCreateBulk) Save(ctx context.Context) ([]*Device, error) {
+	if dcb.err != nil {
+		return nil, dcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(dcb.builders))
 	nodes := make([]*Device, len(dcb.builders))
 	mutators := make([]Mutator, len(dcb.builders))
@@ -362,8 +354,8 @@ func (dcb *DeviceCreateBulk) Save(ctx context.Context) ([]*Device, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, dcb.builders[i+1].mutation)
 				} else {
@@ -507,6 +499,9 @@ func (u *DeviceUpsertBulk) Update(set func(*DeviceUpsert)) *DeviceUpsertBulk {
 
 // Exec executes the query.
 func (u *DeviceUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DeviceCreateBulk instead", i)

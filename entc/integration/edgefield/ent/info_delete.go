@@ -31,7 +31,7 @@ func (id *InfoDelete) Where(ps ...predicate.Info) *InfoDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (id *InfoDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, InfoMutation](ctx, id.sqlExec, id.mutation, id.hooks)
+	return withHooks(ctx, id.sqlExec, id.mutation, id.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (id *InfoDelete) ExecX(ctx context.Context) int {
 }
 
 func (id *InfoDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: info.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: info.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(info.Table, sqlgraph.NewFieldSpec(info.FieldID, field.TypeInt))
 	if ps := id.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type InfoDeleteOne struct {
 	id *InfoDelete
 }
 
+// Where appends a list predicates to the InfoDelete builder.
+func (ido *InfoDeleteOne) Where(ps ...predicate.Info) *InfoDeleteOne {
+	ido.id.mutation.Where(ps...)
+	return ido
+}
+
 // Exec executes the deletion query.
 func (ido *InfoDeleteOne) Exec(ctx context.Context) error {
 	n, err := ido.id.Exec(ctx)
@@ -88,5 +86,7 @@ func (ido *InfoDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ido *InfoDeleteOne) ExecX(ctx context.Context) {
-	ido.id.ExecX(ctx)
+	if err := ido.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

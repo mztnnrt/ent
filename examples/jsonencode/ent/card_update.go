@@ -37,6 +37,14 @@ func (cu *CardUpdate) SetNumber(s string) *CardUpdate {
 	return cu
 }
 
+// SetNillableNumber sets the "number" field if the given value is not nil.
+func (cu *CardUpdate) SetNillableNumber(s *string) *CardUpdate {
+	if s != nil {
+		cu.SetNumber(*s)
+	}
+	return cu
+}
+
 // Mutation returns the CardMutation object of the builder.
 func (cu *CardUpdate) Mutation() *CardMutation {
 	return cu.mutation
@@ -44,7 +52,7 @@ func (cu *CardUpdate) Mutation() *CardMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CardUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CardMutation](ctx, cu.sqlSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -70,16 +78,7 @@ func (cu *CardUpdate) ExecX(ctx context.Context) {
 }
 
 func (cu *CardUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   card.Table,
-			Columns: card.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: card.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(card.Table, card.Columns, sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -116,9 +115,23 @@ func (cuo *CardUpdateOne) SetNumber(s string) *CardUpdateOne {
 	return cuo
 }
 
+// SetNillableNumber sets the "number" field if the given value is not nil.
+func (cuo *CardUpdateOne) SetNillableNumber(s *string) *CardUpdateOne {
+	if s != nil {
+		cuo.SetNumber(*s)
+	}
+	return cuo
+}
+
 // Mutation returns the CardMutation object of the builder.
 func (cuo *CardUpdateOne) Mutation() *CardMutation {
 	return cuo.mutation
+}
+
+// Where appends a list predicates to the CardUpdate builder.
+func (cuo *CardUpdateOne) Where(ps ...predicate.Card) *CardUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -130,7 +143,7 @@ func (cuo *CardUpdateOne) Select(field string, fields ...string) *CardUpdateOne 
 
 // Save executes the query and returns the updated Card entity.
 func (cuo *CardUpdateOne) Save(ctx context.Context) (*Card, error) {
-	return withHooks[*Card, CardMutation](ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -156,16 +169,7 @@ func (cuo *CardUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (cuo *CardUpdateOne) sqlSave(ctx context.Context) (_node *Card, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   card.Table,
-			Columns: card.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: card.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(card.Table, card.Columns, sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Card.id" for update`)}

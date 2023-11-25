@@ -31,7 +31,7 @@ func (rd *RevisionDelete) Where(ps ...predicate.Revision) *RevisionDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (rd *RevisionDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, RevisionMutation](ctx, rd.sqlExec, rd.mutation, rd.hooks)
+	return withHooks(ctx, rd.sqlExec, rd.mutation, rd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (rd *RevisionDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *RevisionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: revision.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: revision.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(revision.Table, sqlgraph.NewFieldSpec(revision.FieldID, field.TypeString))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type RevisionDeleteOne struct {
 	rd *RevisionDelete
 }
 
+// Where appends a list predicates to the RevisionDelete builder.
+func (rdo *RevisionDeleteOne) Where(ps ...predicate.Revision) *RevisionDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
+}
+
 // Exec executes the deletion query.
 func (rdo *RevisionDeleteOne) Exec(ctx context.Context) error {
 	n, err := rdo.rd.Exec(ctx)
@@ -88,5 +86,7 @@ func (rdo *RevisionDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *RevisionDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

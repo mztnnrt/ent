@@ -62,6 +62,14 @@ func (fu *FileUpdate) SetName(s string) *FileUpdate {
 	return fu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (fu *FileUpdate) SetNillableName(s *string) *FileUpdate {
+	if s != nil {
+		fu.SetName(*s)
+	}
+	return fu
+}
+
 // SetUser sets the "user" field.
 func (fu *FileUpdate) SetUser(s string) *FileUpdate {
 	fu.mutation.SetUser(s)
@@ -242,7 +250,7 @@ func (fu *FileUpdate) RemoveField(f ...*FieldType) *FileUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (fu *FileUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, FileMutation](ctx, fu.gremlinSave, fu.mutation, fu.hooks)
+	return withHooks(ctx, fu.gremlinSave, fu.mutation, fu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -424,6 +432,14 @@ func (fuo *FileUpdateOne) SetName(s string) *FileUpdateOne {
 	return fuo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (fuo *FileUpdateOne) SetNillableName(s *string) *FileUpdateOne {
+	if s != nil {
+		fuo.SetName(*s)
+	}
+	return fuo
+}
+
 // SetUser sets the "user" field.
 func (fuo *FileUpdateOne) SetUser(s string) *FileUpdateOne {
 	fuo.mutation.SetUser(s)
@@ -602,6 +618,12 @@ func (fuo *FileUpdateOne) RemoveField(f ...*FieldType) *FileUpdateOne {
 	return fuo.RemoveFieldIDs(ids...)
 }
 
+// Where appends a list predicates to the FileUpdate builder.
+func (fuo *FileUpdateOne) Where(ps ...predicate.File) *FileUpdateOne {
+	fuo.mutation.Where(ps...)
+	return fuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (fuo *FileUpdateOne) Select(field string, fields ...string) *FileUpdateOne {
@@ -611,7 +633,7 @@ func (fuo *FileUpdateOne) Select(field string, fields ...string) *FileUpdateOne 
 
 // Save executes the query and returns the updated File entity.
 func (fuo *FileUpdateOne) Save(ctx context.Context) (*File, error) {
-	return withHooks[*File, FileMutation](ctx, fuo.gremlinSave, fuo.mutation, fuo.hooks)
+	return withHooks(ctx, fuo.gremlinSave, fuo.mutation, fuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

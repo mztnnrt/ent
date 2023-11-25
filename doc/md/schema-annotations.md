@@ -44,12 +44,17 @@ func (User) Fields() []ent.Field {
 }
 ```
 
+## Custom Table Schema
+
+Using the [Atlas](https://atlasgo.io) migration engine, an Ent schema can be defined and managed across multiple
+database schemas. Check out the [multi-schema doc](multischema-migrations) for more information.
+
 ## Foreign Keys Configuration
 
 Ent allows to customize the foreign key creation and provide a [referential action](https://dev.mysql.com/doc/refman/8.0/en/create-table-foreign-keys.html#foreign-key-referential-actions)
 for the `ON DELETE` clause:
 
-```go title="ent/schema/user.go"
+```go title="ent/schema/user.go" {27}
 package schema
 
 import (
@@ -76,9 +81,7 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("posts", Post.Type).
-			Annotations(entsql.Annotation{
-				OnDelete: entsql.Cascade,
-			}),
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 ```
@@ -88,15 +91,16 @@ rows in the child table.
 
 ## Database Comments
 
-By default, column comments are not stored in the database. However, this functionality can be enabled by using the
-`WithComments(true)` annotation. For example:
+By default, table and column comments are not stored in the database. However, this functionality can be enabled by
+using the `WithComments(true)` annotation. For example:
 
-```go title="ent/schema/user.go" {17-19,32-35}
+```go title="ent/schema/user.go" {18-21,34-37}
 package schema
 
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/field"
 )
 
@@ -108,9 +112,10 @@ type User struct {
 // Annotations of the User.
 func (User) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-	    // Adding this annotation on the
-	    // type enables it for all fields.
+		// Adding this annotation to the schema enables
+		// comments for the table and all its fields.
 		entsql.WithComments(true),
+		schema.Comment("Comment that appears in both the schema and the generated code"),
 	}
 }
 

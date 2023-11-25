@@ -71,7 +71,7 @@ func (rc *RentalCreate) Mutation() *RentalMutation {
 // Save creates the Rental in the database.
 func (rc *RentalCreate) Save(ctx context.Context) (*Rental, error) {
 	rc.defaults()
-	return withHooks[*Rental, RentalMutation](ctx, rc.sqlSave, rc.mutation, rc.hooks)
+	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -145,13 +145,7 @@ func (rc *RentalCreate) sqlSave(ctx context.Context) (*Rental, error) {
 func (rc *RentalCreate) createSpec() (*Rental, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Rental{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: rental.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: rental.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(rental.Table, sqlgraph.NewFieldSpec(rental.FieldID, field.TypeInt))
 	)
 	if value, ok := rc.mutation.Date(); ok {
 		_spec.SetField(rental.FieldDate, field.TypeTime, value)
@@ -165,10 +159,7 @@ func (rc *RentalCreate) createSpec() (*Rental, *sqlgraph.CreateSpec) {
 			Columns: []string{rental.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -185,10 +176,7 @@ func (rc *RentalCreate) createSpec() (*Rental, *sqlgraph.CreateSpec) {
 			Columns: []string{rental.CarColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: car.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(car.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -203,11 +191,15 @@ func (rc *RentalCreate) createSpec() (*Rental, *sqlgraph.CreateSpec) {
 // RentalCreateBulk is the builder for creating many Rental entities in bulk.
 type RentalCreateBulk struct {
 	config
+	err      error
 	builders []*RentalCreate
 }
 
 // Save creates the Rental entities in the database.
 func (rcb *RentalCreateBulk) Save(ctx context.Context) ([]*Rental, error) {
+	if rcb.err != nil {
+		return nil, rcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rcb.builders))
 	nodes := make([]*Rental, len(rcb.builders))
 	mutators := make([]Mutator, len(rcb.builders))
@@ -224,8 +216,8 @@ func (rcb *RentalCreateBulk) Save(ctx context.Context) ([]*Rental, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, rcb.builders[i+1].mutation)
 				} else {

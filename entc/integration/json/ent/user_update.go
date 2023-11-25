@@ -163,6 +163,60 @@ func (uu *UserUpdate) ClearStrings() *UserUpdate {
 	return uu
 }
 
+// SetIntsValidate sets the "ints_validate" field.
+func (uu *UserUpdate) SetIntsValidate(i []int) *UserUpdate {
+	uu.mutation.SetIntsValidate(i)
+	return uu
+}
+
+// AppendIntsValidate appends i to the "ints_validate" field.
+func (uu *UserUpdate) AppendIntsValidate(i []int) *UserUpdate {
+	uu.mutation.AppendIntsValidate(i)
+	return uu
+}
+
+// ClearIntsValidate clears the value of the "ints_validate" field.
+func (uu *UserUpdate) ClearIntsValidate() *UserUpdate {
+	uu.mutation.ClearIntsValidate()
+	return uu
+}
+
+// SetFloatsValidate sets the "floats_validate" field.
+func (uu *UserUpdate) SetFloatsValidate(f []float64) *UserUpdate {
+	uu.mutation.SetFloatsValidate(f)
+	return uu
+}
+
+// AppendFloatsValidate appends f to the "floats_validate" field.
+func (uu *UserUpdate) AppendFloatsValidate(f []float64) *UserUpdate {
+	uu.mutation.AppendFloatsValidate(f)
+	return uu
+}
+
+// ClearFloatsValidate clears the value of the "floats_validate" field.
+func (uu *UserUpdate) ClearFloatsValidate() *UserUpdate {
+	uu.mutation.ClearFloatsValidate()
+	return uu
+}
+
+// SetStringsValidate sets the "strings_validate" field.
+func (uu *UserUpdate) SetStringsValidate(s []string) *UserUpdate {
+	uu.mutation.SetStringsValidate(s)
+	return uu
+}
+
+// AppendStringsValidate appends s to the "strings_validate" field.
+func (uu *UserUpdate) AppendStringsValidate(s []string) *UserUpdate {
+	uu.mutation.AppendStringsValidate(s)
+	return uu
+}
+
+// ClearStringsValidate clears the value of the "strings_validate" field.
+func (uu *UserUpdate) ClearStringsValidate() *UserUpdate {
+	uu.mutation.ClearStringsValidate()
+	return uu
+}
+
 // SetAddr sets the "addr" field.
 func (uu *UserUpdate) SetAddr(s schema.Addr) *UserUpdate {
 	uu.mutation.SetAddr(s)
@@ -183,6 +237,18 @@ func (uu *UserUpdate) ClearAddr() *UserUpdate {
 	return uu
 }
 
+// SetUnknown sets the "unknown" field.
+func (uu *UserUpdate) SetUnknown(a any) *UserUpdate {
+	uu.mutation.SetUnknown(a)
+	return uu
+}
+
+// ClearUnknown clears the value of the "unknown" field.
+func (uu *UserUpdate) ClearUnknown() *UserUpdate {
+	uu.mutation.ClearUnknown()
+	return uu
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -190,7 +256,7 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, UserMutation](ctx, uu.sqlSave, uu.mutation, uu.hooks)
+	return withHooks(ctx, uu.sqlSave, uu.mutation, uu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -215,6 +281,26 @@ func (uu *UserUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (uu *UserUpdate) check() error {
+	if v, ok := uu.mutation.IntsValidate(); ok {
+		if err := user.IntsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "ints_validate", err: fmt.Errorf(`ent: validator failed for field "User.ints_validate": %w`, err)}
+		}
+	}
+	if v, ok := uu.mutation.FloatsValidate(); ok {
+		if err := user.FloatsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "floats_validate", err: fmt.Errorf(`ent: validator failed for field "User.floats_validate": %w`, err)}
+		}
+	}
+	if v, ok := uu.mutation.StringsValidate(); ok {
+		if err := user.StringsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "strings_validate", err: fmt.Errorf(`ent: validator failed for field "User.strings_validate": %w`, err)}
+		}
+	}
+	return nil
+}
+
 // Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
 func (uu *UserUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UserUpdate {
 	uu.modifiers = append(uu.modifiers, modifiers...)
@@ -222,16 +308,10 @@ func (uu *UserUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UserUpdat
 }
 
 func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   user.Table,
-			Columns: user.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: user.FieldID,
-			},
-		},
+	if err := uu.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
 	if ps := uu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -314,11 +394,50 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if uu.mutation.StringsCleared() {
 		_spec.ClearField(user.FieldStrings, field.TypeJSON)
 	}
+	if value, ok := uu.mutation.IntsValidate(); ok {
+		_spec.SetField(user.FieldIntsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uu.mutation.AppendedIntsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldIntsValidate, value)
+		})
+	}
+	if uu.mutation.IntsValidateCleared() {
+		_spec.ClearField(user.FieldIntsValidate, field.TypeJSON)
+	}
+	if value, ok := uu.mutation.FloatsValidate(); ok {
+		_spec.SetField(user.FieldFloatsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uu.mutation.AppendedFloatsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldFloatsValidate, value)
+		})
+	}
+	if uu.mutation.FloatsValidateCleared() {
+		_spec.ClearField(user.FieldFloatsValidate, field.TypeJSON)
+	}
+	if value, ok := uu.mutation.StringsValidate(); ok {
+		_spec.SetField(user.FieldStringsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uu.mutation.AppendedStringsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldStringsValidate, value)
+		})
+	}
+	if uu.mutation.StringsValidateCleared() {
+		_spec.ClearField(user.FieldStringsValidate, field.TypeJSON)
+	}
 	if value, ok := uu.mutation.Addr(); ok {
 		_spec.SetField(user.FieldAddr, field.TypeJSON, value)
 	}
 	if uu.mutation.AddrCleared() {
 		_spec.ClearField(user.FieldAddr, field.TypeJSON)
+	}
+	if value, ok := uu.mutation.Unknown(); ok {
+		_spec.SetField(user.FieldUnknown, field.TypeJSON, value)
+	}
+	if uu.mutation.UnknownCleared() {
+		_spec.ClearField(user.FieldUnknown, field.TypeJSON)
 	}
 	_spec.AddModifiers(uu.modifiers...)
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
@@ -468,6 +587,60 @@ func (uuo *UserUpdateOne) ClearStrings() *UserUpdateOne {
 	return uuo
 }
 
+// SetIntsValidate sets the "ints_validate" field.
+func (uuo *UserUpdateOne) SetIntsValidate(i []int) *UserUpdateOne {
+	uuo.mutation.SetIntsValidate(i)
+	return uuo
+}
+
+// AppendIntsValidate appends i to the "ints_validate" field.
+func (uuo *UserUpdateOne) AppendIntsValidate(i []int) *UserUpdateOne {
+	uuo.mutation.AppendIntsValidate(i)
+	return uuo
+}
+
+// ClearIntsValidate clears the value of the "ints_validate" field.
+func (uuo *UserUpdateOne) ClearIntsValidate() *UserUpdateOne {
+	uuo.mutation.ClearIntsValidate()
+	return uuo
+}
+
+// SetFloatsValidate sets the "floats_validate" field.
+func (uuo *UserUpdateOne) SetFloatsValidate(f []float64) *UserUpdateOne {
+	uuo.mutation.SetFloatsValidate(f)
+	return uuo
+}
+
+// AppendFloatsValidate appends f to the "floats_validate" field.
+func (uuo *UserUpdateOne) AppendFloatsValidate(f []float64) *UserUpdateOne {
+	uuo.mutation.AppendFloatsValidate(f)
+	return uuo
+}
+
+// ClearFloatsValidate clears the value of the "floats_validate" field.
+func (uuo *UserUpdateOne) ClearFloatsValidate() *UserUpdateOne {
+	uuo.mutation.ClearFloatsValidate()
+	return uuo
+}
+
+// SetStringsValidate sets the "strings_validate" field.
+func (uuo *UserUpdateOne) SetStringsValidate(s []string) *UserUpdateOne {
+	uuo.mutation.SetStringsValidate(s)
+	return uuo
+}
+
+// AppendStringsValidate appends s to the "strings_validate" field.
+func (uuo *UserUpdateOne) AppendStringsValidate(s []string) *UserUpdateOne {
+	uuo.mutation.AppendStringsValidate(s)
+	return uuo
+}
+
+// ClearStringsValidate clears the value of the "strings_validate" field.
+func (uuo *UserUpdateOne) ClearStringsValidate() *UserUpdateOne {
+	uuo.mutation.ClearStringsValidate()
+	return uuo
+}
+
 // SetAddr sets the "addr" field.
 func (uuo *UserUpdateOne) SetAddr(s schema.Addr) *UserUpdateOne {
 	uuo.mutation.SetAddr(s)
@@ -488,9 +661,27 @@ func (uuo *UserUpdateOne) ClearAddr() *UserUpdateOne {
 	return uuo
 }
 
+// SetUnknown sets the "unknown" field.
+func (uuo *UserUpdateOne) SetUnknown(a any) *UserUpdateOne {
+	uuo.mutation.SetUnknown(a)
+	return uuo
+}
+
+// ClearUnknown clears the value of the "unknown" field.
+func (uuo *UserUpdateOne) ClearUnknown() *UserUpdateOne {
+	uuo.mutation.ClearUnknown()
+	return uuo
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
+}
+
+// Where appends a list predicates to the UserUpdate builder.
+func (uuo *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
+	uuo.mutation.Where(ps...)
+	return uuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -502,7 +693,7 @@ func (uuo *UserUpdateOne) Select(field string, fields ...string) *UserUpdateOne 
 
 // Save executes the query and returns the updated User entity.
 func (uuo *UserUpdateOne) Save(ctx context.Context) (*User, error) {
-	return withHooks[*User, UserMutation](ctx, uuo.sqlSave, uuo.mutation, uuo.hooks)
+	return withHooks(ctx, uuo.sqlSave, uuo.mutation, uuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -527,6 +718,26 @@ func (uuo *UserUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (uuo *UserUpdateOne) check() error {
+	if v, ok := uuo.mutation.IntsValidate(); ok {
+		if err := user.IntsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "ints_validate", err: fmt.Errorf(`ent: validator failed for field "User.ints_validate": %w`, err)}
+		}
+	}
+	if v, ok := uuo.mutation.FloatsValidate(); ok {
+		if err := user.FloatsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "floats_validate", err: fmt.Errorf(`ent: validator failed for field "User.floats_validate": %w`, err)}
+		}
+	}
+	if v, ok := uuo.mutation.StringsValidate(); ok {
+		if err := user.StringsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "strings_validate", err: fmt.Errorf(`ent: validator failed for field "User.strings_validate": %w`, err)}
+		}
+	}
+	return nil
+}
+
 // Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
 func (uuo *UserUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UserUpdateOne {
 	uuo.modifiers = append(uuo.modifiers, modifiers...)
@@ -534,16 +745,10 @@ func (uuo *UserUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UserU
 }
 
 func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   user.Table,
-			Columns: user.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: user.FieldID,
-			},
-		},
+	if err := uuo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
 	id, ok := uuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "User.id" for update`)}
@@ -643,11 +848,50 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	if uuo.mutation.StringsCleared() {
 		_spec.ClearField(user.FieldStrings, field.TypeJSON)
 	}
+	if value, ok := uuo.mutation.IntsValidate(); ok {
+		_spec.SetField(user.FieldIntsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uuo.mutation.AppendedIntsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldIntsValidate, value)
+		})
+	}
+	if uuo.mutation.IntsValidateCleared() {
+		_spec.ClearField(user.FieldIntsValidate, field.TypeJSON)
+	}
+	if value, ok := uuo.mutation.FloatsValidate(); ok {
+		_spec.SetField(user.FieldFloatsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uuo.mutation.AppendedFloatsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldFloatsValidate, value)
+		})
+	}
+	if uuo.mutation.FloatsValidateCleared() {
+		_spec.ClearField(user.FieldFloatsValidate, field.TypeJSON)
+	}
+	if value, ok := uuo.mutation.StringsValidate(); ok {
+		_spec.SetField(user.FieldStringsValidate, field.TypeJSON, value)
+	}
+	if value, ok := uuo.mutation.AppendedStringsValidate(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldStringsValidate, value)
+		})
+	}
+	if uuo.mutation.StringsValidateCleared() {
+		_spec.ClearField(user.FieldStringsValidate, field.TypeJSON)
+	}
 	if value, ok := uuo.mutation.Addr(); ok {
 		_spec.SetField(user.FieldAddr, field.TypeJSON, value)
 	}
 	if uuo.mutation.AddrCleared() {
 		_spec.ClearField(user.FieldAddr, field.TypeJSON)
+	}
+	if value, ok := uuo.mutation.Unknown(); ok {
+		_spec.SetField(user.FieldUnknown, field.TypeJSON, value)
+	}
+	if uuo.mutation.UnknownCleared() {
+		_spec.ClearField(user.FieldUnknown, field.TypeJSON)
 	}
 	_spec.AddModifiers(uuo.modifiers...)
 	_node = &User{config: uuo.config}

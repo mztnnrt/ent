@@ -49,7 +49,7 @@ func (oc *OtherCreate) Mutation() *OtherMutation {
 // Save creates the Other in the database.
 func (oc *OtherCreate) Save(ctx context.Context) (*Other, error) {
 	oc.defaults()
-	return withHooks[*Other, OtherMutation](ctx, oc.sqlSave, oc.mutation, oc.hooks)
+	return withHooks(ctx, oc.sqlSave, oc.mutation, oc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -113,13 +113,7 @@ func (oc *OtherCreate) sqlSave(ctx context.Context) (*Other, error) {
 func (oc *OtherCreate) createSpec() (*Other, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Other{config: oc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: other.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeOther,
-				Column: other.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(other.Table, sqlgraph.NewFieldSpec(other.FieldID, field.TypeOther))
 	)
 	_spec.OnConflict = oc.conflict
 	if id, ok := oc.mutation.ID(); ok {
@@ -261,12 +255,16 @@ func (u *OtherUpsertOne) IDX(ctx context.Context) sid.ID {
 // OtherCreateBulk is the builder for creating many Other entities in bulk.
 type OtherCreateBulk struct {
 	config
+	err      error
 	builders []*OtherCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Other entities in the database.
 func (ocb *OtherCreateBulk) Save(ctx context.Context) ([]*Other, error) {
+	if ocb.err != nil {
+		return nil, ocb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ocb.builders))
 	nodes := make([]*Other, len(ocb.builders))
 	mutators := make([]Mutator, len(ocb.builders))
@@ -283,8 +281,8 @@ func (ocb *OtherCreateBulk) Save(ctx context.Context) ([]*Other, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ocb.builders[i+1].mutation)
 				} else {
@@ -428,6 +426,9 @@ func (u *OtherUpsertBulk) Update(set func(*OtherUpsert)) *OtherUpsertBulk {
 
 // Exec executes the query.
 func (u *OtherUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the OtherCreateBulk instead", i)

@@ -74,7 +74,7 @@ func (su *SpecUpdate) RemoveCard(c ...*Card) *SpecUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (su *SpecUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, SpecMutation](ctx, su.gremlinSave, su.mutation, su.hooks)
+	return withHooks(ctx, su.gremlinSave, su.mutation, su.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -184,6 +184,12 @@ func (suo *SpecUpdateOne) RemoveCard(c ...*Card) *SpecUpdateOne {
 	return suo.RemoveCardIDs(ids...)
 }
 
+// Where appends a list predicates to the SpecUpdate builder.
+func (suo *SpecUpdateOne) Where(ps ...predicate.Spec) *SpecUpdateOne {
+	suo.mutation.Where(ps...)
+	return suo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (suo *SpecUpdateOne) Select(field string, fields ...string) *SpecUpdateOne {
@@ -193,7 +199,7 @@ func (suo *SpecUpdateOne) Select(field string, fields ...string) *SpecUpdateOne 
 
 // Save executes the query and returns the updated Spec entity.
 func (suo *SpecUpdateOne) Save(ctx context.Context) (*Spec, error) {
-	return withHooks[*Spec, SpecMutation](ctx, suo.gremlinSave, suo.mutation, suo.hooks)
+	return withHooks(ctx, suo.gremlinSave, suo.mutation, suo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

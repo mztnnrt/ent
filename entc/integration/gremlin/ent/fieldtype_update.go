@@ -1350,7 +1350,7 @@ func (ftu *FieldTypeUpdate) Mutation() *FieldTypeMutation {
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ftu *FieldTypeUpdate) Save(ctx context.Context) (int, error) {
 	ftu.defaults()
-	return withHooks[int, FieldTypeMutation](ctx, ftu.gremlinSave, ftu.mutation, ftu.hooks)
+	return withHooks(ctx, ftu.gremlinSave, ftu.mutation, ftu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -3243,6 +3243,12 @@ func (ftuo *FieldTypeUpdateOne) Mutation() *FieldTypeMutation {
 	return ftuo.mutation
 }
 
+// Where appends a list predicates to the FieldTypeUpdate builder.
+func (ftuo *FieldTypeUpdateOne) Where(ps ...predicate.FieldType) *FieldTypeUpdateOne {
+	ftuo.mutation.Where(ps...)
+	return ftuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ftuo *FieldTypeUpdateOne) Select(field string, fields ...string) *FieldTypeUpdateOne {
@@ -3253,7 +3259,7 @@ func (ftuo *FieldTypeUpdateOne) Select(field string, fields ...string) *FieldTyp
 // Save executes the query and returns the updated FieldType entity.
 func (ftuo *FieldTypeUpdateOne) Save(ctx context.Context) (*FieldType, error) {
 	ftuo.defaults()
-	return withHooks[*FieldType, FieldTypeMutation](ctx, ftuo.gremlinSave, ftuo.mutation, ftuo.hooks)
+	return withHooks(ctx, ftuo.gremlinSave, ftuo.mutation, ftuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

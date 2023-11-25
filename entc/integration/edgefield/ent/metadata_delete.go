@@ -31,7 +31,7 @@ func (md *MetadataDelete) Where(ps ...predicate.Metadata) *MetadataDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (md *MetadataDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, MetadataMutation](ctx, md.sqlExec, md.mutation, md.hooks)
+	return withHooks(ctx, md.sqlExec, md.mutation, md.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (md *MetadataDelete) ExecX(ctx context.Context) int {
 }
 
 func (md *MetadataDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: metadata.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: metadata.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(metadata.Table, sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt))
 	if ps := md.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type MetadataDeleteOne struct {
 	md *MetadataDelete
 }
 
+// Where appends a list predicates to the MetadataDelete builder.
+func (mdo *MetadataDeleteOne) Where(ps ...predicate.Metadata) *MetadataDeleteOne {
+	mdo.md.mutation.Where(ps...)
+	return mdo
+}
+
 // Exec executes the deletion query.
 func (mdo *MetadataDeleteOne) Exec(ctx context.Context) error {
 	n, err := mdo.md.Exec(ctx)
@@ -88,5 +86,7 @@ func (mdo *MetadataDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (mdo *MetadataDeleteOne) ExecX(ctx context.Context) {
-	mdo.md.ExecX(ctx)
+	if err := mdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

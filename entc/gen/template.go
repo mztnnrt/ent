@@ -104,19 +104,8 @@ var (
 			},
 		},
 		{
-			Name:   "context",
-			Format: "context.go",
-		},
-		{
 			Name:   "tx",
 			Format: "tx.go",
-		},
-		{
-			Name:   "config",
-			Format: "config.go",
-			ExtendPatterns: []string{
-				"dialect/*/config/*/*",
-			},
 		},
 		{
 			Name:   "mutation",
@@ -174,11 +163,14 @@ var (
 			Format: "runtime/runtime.go",
 		},
 	}
+	// template files that were deleted and should be removed by the codegen.
+	deletedTemplates = []string{"config.go", "context.go"}
 	// patterns for extending partial-templates (included by other templates).
 	partialPatterns = [...]string{
 		"client/additional/*",
 		"client/additional/*/*",
 		"config/*/*",
+		"config/*/*/*",
 		"create/additional/*",
 		"delete/additional/*",
 		"dialect/*/*/*/spec/*",
@@ -188,6 +180,7 @@ var (
 		"dialect/*/query/selector/*",
 		"dialect/sql/create/additional/*",
 		"dialect/sql/create_bulk/additional/*",
+		"dialect/sql/meta/constants/*",
 		"dialect/sql/model/additional/*",
 		"dialect/sql/model/edges/*",
 		"dialect/sql/model/edges/fields/additional/*",

@@ -31,7 +31,7 @@ func (fd *FileDelete) Where(ps ...predicate.File) *FileDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (fd *FileDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, FileMutation](ctx, fd.sqlExec, fd.mutation, fd.hooks)
+	return withHooks(ctx, fd.sqlExec, fd.mutation, fd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (fd *FileDelete) ExecX(ctx context.Context) int {
 }
 
 func (fd *FileDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: file.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: file.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(file.Table, sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt))
 	if ps := fd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type FileDeleteOne struct {
 	fd *FileDelete
 }
 
+// Where appends a list predicates to the FileDelete builder.
+func (fdo *FileDeleteOne) Where(ps ...predicate.File) *FileDeleteOne {
+	fdo.fd.mutation.Where(ps...)
+	return fdo
+}
+
 // Exec executes the deletion query.
 func (fdo *FileDeleteOne) Exec(ctx context.Context) error {
 	n, err := fdo.fd.Exec(ctx)
@@ -88,5 +86,7 @@ func (fdo *FileDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (fdo *FileDeleteOne) ExecX(ctx context.Context) {
-	fdo.fd.ExecX(ctx)
+	if err := fdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

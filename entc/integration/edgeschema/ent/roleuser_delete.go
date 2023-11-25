@@ -30,7 +30,7 @@ func (rud *RoleUserDelete) Where(ps ...predicate.RoleUser) *RoleUserDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (rud *RoleUserDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, RoleUserMutation](ctx, rud.sqlExec, rud.mutation, rud.hooks)
+	return withHooks(ctx, rud.sqlExec, rud.mutation, rud.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -43,11 +43,7 @@ func (rud *RoleUserDelete) ExecX(ctx context.Context) int {
 }
 
 func (rud *RoleUserDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: roleuser.Table,
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(roleuser.Table, nil)
 	if ps := rud.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -68,6 +64,12 @@ type RoleUserDeleteOne struct {
 	rud *RoleUserDelete
 }
 
+// Where appends a list predicates to the RoleUserDelete builder.
+func (rudo *RoleUserDeleteOne) Where(ps ...predicate.RoleUser) *RoleUserDeleteOne {
+	rudo.rud.mutation.Where(ps...)
+	return rudo
+}
+
 // Exec executes the deletion query.
 func (rudo *RoleUserDeleteOne) Exec(ctx context.Context) error {
 	n, err := rudo.rud.Exec(ctx)
@@ -83,5 +85,7 @@ func (rudo *RoleUserDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rudo *RoleUserDeleteOne) ExecX(ctx context.Context) {
-	rudo.rud.ExecX(ctx)
+	if err := rudo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

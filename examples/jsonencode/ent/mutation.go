@@ -12,13 +12,12 @@ import (
 	"fmt"
 	"sync"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/examples/jsonencode/ent/card"
 	"entgo.io/ent/examples/jsonencode/ent/pet"
 	"entgo.io/ent/examples/jsonencode/ent/predicate"
 	"entgo.io/ent/examples/jsonencode/ent/user"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -607,6 +606,7 @@ func (m *PetMutation) ResetOwnerID() {
 // ClearOwner clears the "owner" edge to the User entity.
 func (m *PetMutation) ClearOwner() {
 	m.clearedowner = true
+	m.clearedFields[pet.FieldOwnerID] = struct{}{}
 }
 
 // OwnerCleared reports if the "owner" edge to the User entity was cleared.

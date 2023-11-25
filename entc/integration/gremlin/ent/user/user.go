@@ -8,6 +8,8 @@ package user
 
 import (
 	"fmt"
+
+	"entgo.io/ent/dialect/gremlin/graph/dsl"
 )
 
 const (
@@ -37,6 +39,8 @@ const (
 	FieldEmployment = "employment"
 	// FieldSSOCert holds the string denoting the ssocert field in the database.
 	FieldSSOCert = "sso_cert"
+	// FieldFilesCount holds the string denoting the files_count field in the database.
+	FieldFilesCount = "files_count"
 	// EdgeCard holds the string denoting the card edge name in mutations.
 	EdgeCard = "card"
 	// EdgePets holds the string denoting the pets edge name in mutations.
@@ -146,6 +150,9 @@ func EmploymentValidator(e Employment) error {
 		return fmt.Errorf("user: invalid enum value for employment field: %q", e)
 	}
 }
+
+// OrderOption defines the ordering options for the User queries.
+type OrderOption func(*dsl.Traversal)
 
 // Ptr returns a new pointer to the enum value.
 func (r Role) Ptr() *Role {

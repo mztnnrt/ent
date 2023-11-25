@@ -101,7 +101,7 @@ func (du *DeviceUpdate) RemoveSessions(s ...*Session) *DeviceUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (du *DeviceUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, DeviceMutation](ctx, du.sqlSave, du.mutation, du.hooks)
+	return withHooks(ctx, du.sqlSave, du.mutation, du.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -127,16 +127,7 @@ func (du *DeviceUpdate) ExecX(ctx context.Context) {
 }
 
 func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   device.Table,
-			Columns: device.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeBytes,
-				Column: device.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(device.Table, device.Columns, sqlgraph.NewFieldSpec(device.FieldID, field.TypeBytes))
 	if ps := du.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -152,10 +143,7 @@ func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{device.ActiveSessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -168,10 +156,7 @@ func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{device.ActiveSessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -187,10 +172,7 @@ func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -203,10 +185,7 @@ func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -222,10 +201,7 @@ func (du *DeviceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -319,6 +295,12 @@ func (duo *DeviceUpdateOne) RemoveSessions(s ...*Session) *DeviceUpdateOne {
 	return duo.RemoveSessionIDs(ids...)
 }
 
+// Where appends a list predicates to the DeviceUpdate builder.
+func (duo *DeviceUpdateOne) Where(ps ...predicate.Device) *DeviceUpdateOne {
+	duo.mutation.Where(ps...)
+	return duo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (duo *DeviceUpdateOne) Select(field string, fields ...string) *DeviceUpdateOne {
@@ -328,7 +310,7 @@ func (duo *DeviceUpdateOne) Select(field string, fields ...string) *DeviceUpdate
 
 // Save executes the query and returns the updated Device entity.
 func (duo *DeviceUpdateOne) Save(ctx context.Context) (*Device, error) {
-	return withHooks[*Device, DeviceMutation](ctx, duo.sqlSave, duo.mutation, duo.hooks)
+	return withHooks(ctx, duo.sqlSave, duo.mutation, duo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -354,16 +336,7 @@ func (duo *DeviceUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   device.Table,
-			Columns: device.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeBytes,
-				Column: device.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(device.Table, device.Columns, sqlgraph.NewFieldSpec(device.FieldID, field.TypeBytes))
 	id, ok := duo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Device.id" for update`)}
@@ -396,10 +369,7 @@ func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err err
 			Columns: []string{device.ActiveSessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -412,10 +382,7 @@ func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err err
 			Columns: []string{device.ActiveSessionColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -431,10 +398,7 @@ func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err err
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -447,10 +411,7 @@ func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err err
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -466,10 +427,7 @@ func (duo *DeviceUpdateOne) sqlSave(ctx context.Context) (_node *Device, err err
 			Columns: []string{device.SessionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: session.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {

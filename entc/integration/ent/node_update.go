@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -56,6 +57,18 @@ func (nu *NodeUpdate) AddValue(i int) *NodeUpdate {
 // ClearValue clears the value of the "value" field.
 func (nu *NodeUpdate) ClearValue() *NodeUpdate {
 	nu.mutation.ClearValue()
+	return nu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (nu *NodeUpdate) SetUpdatedAt(t time.Time) *NodeUpdate {
+	nu.mutation.SetUpdatedAt(t)
+	return nu
+}
+
+// ClearUpdatedAt clears the value of the "updated_at" field.
+func (nu *NodeUpdate) ClearUpdatedAt() *NodeUpdate {
+	nu.mutation.ClearUpdatedAt()
 	return nu
 }
 
@@ -116,7 +129,8 @@ func (nu *NodeUpdate) ClearNext() *NodeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (nu *NodeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, NodeMutation](ctx, nu.sqlSave, nu.mutation, nu.hooks)
+	nu.defaults()
+	return withHooks(ctx, nu.sqlSave, nu.mutation, nu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -141,6 +155,14 @@ func (nu *NodeUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (nu *NodeUpdate) defaults() {
+	if _, ok := nu.mutation.UpdatedAt(); !ok && !nu.mutation.UpdatedAtCleared() {
+		v := node.UpdateDefaultUpdatedAt()
+		nu.mutation.SetUpdatedAt(v)
+	}
+}
+
 // Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
 func (nu *NodeUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *NodeUpdate {
 	nu.modifiers = append(nu.modifiers, modifiers...)
@@ -148,16 +170,7 @@ func (nu *NodeUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *NodeUpdat
 }
 
 func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	if ps := nu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -174,6 +187,12 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if nu.mutation.ValueCleared() {
 		_spec.ClearField(node.FieldValue, field.TypeInt)
 	}
+	if value, ok := nu.mutation.UpdatedAt(); ok {
+		_spec.SetField(node.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if nu.mutation.UpdatedAtCleared() {
+		_spec.ClearField(node.FieldUpdatedAt, field.TypeTime)
+	}
 	if nu.mutation.PrevCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -182,10 +201,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -198,10 +214,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -217,10 +230,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -233,10 +243,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -290,6 +297,18 @@ func (nuo *NodeUpdateOne) AddValue(i int) *NodeUpdateOne {
 // ClearValue clears the value of the "value" field.
 func (nuo *NodeUpdateOne) ClearValue() *NodeUpdateOne {
 	nuo.mutation.ClearValue()
+	return nuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (nuo *NodeUpdateOne) SetUpdatedAt(t time.Time) *NodeUpdateOne {
+	nuo.mutation.SetUpdatedAt(t)
+	return nuo
+}
+
+// ClearUpdatedAt clears the value of the "updated_at" field.
+func (nuo *NodeUpdateOne) ClearUpdatedAt() *NodeUpdateOne {
+	nuo.mutation.ClearUpdatedAt()
 	return nuo
 }
 
@@ -348,6 +367,12 @@ func (nuo *NodeUpdateOne) ClearNext() *NodeUpdateOne {
 	return nuo
 }
 
+// Where appends a list predicates to the NodeUpdate builder.
+func (nuo *NodeUpdateOne) Where(ps ...predicate.Node) *NodeUpdateOne {
+	nuo.mutation.Where(ps...)
+	return nuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne {
@@ -357,7 +382,8 @@ func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne 
 
 // Save executes the query and returns the updated Node entity.
 func (nuo *NodeUpdateOne) Save(ctx context.Context) (*Node, error) {
-	return withHooks[*Node, NodeMutation](ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
+	nuo.defaults()
+	return withHooks(ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -382,6 +408,14 @@ func (nuo *NodeUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (nuo *NodeUpdateOne) defaults() {
+	if _, ok := nuo.mutation.UpdatedAt(); !ok && !nuo.mutation.UpdatedAtCleared() {
+		v := node.UpdateDefaultUpdatedAt()
+		nuo.mutation.SetUpdatedAt(v)
+	}
+}
+
 // Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
 func (nuo *NodeUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *NodeUpdateOne {
 	nuo.modifiers = append(nuo.modifiers, modifiers...)
@@ -389,16 +423,7 @@ func (nuo *NodeUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *NodeU
 }
 
 func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	id, ok := nuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Node.id" for update`)}
@@ -432,6 +457,12 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 	if nuo.mutation.ValueCleared() {
 		_spec.ClearField(node.FieldValue, field.TypeInt)
 	}
+	if value, ok := nuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(node.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if nuo.mutation.UpdatedAtCleared() {
+		_spec.ClearField(node.FieldUpdatedAt, field.TypeTime)
+	}
 	if nuo.mutation.PrevCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -440,10 +471,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -456,10 +484,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -475,10 +500,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -491,10 +513,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

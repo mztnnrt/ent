@@ -31,7 +31,7 @@ func (cd *CarDelete) Where(ps ...predicate.Car) *CarDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *CarDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, CarMutation](ctx, cd.sqlExec, cd.mutation, cd.hooks)
+	return withHooks(ctx, cd.sqlExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (cd *CarDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *CarDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: car.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: car.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(car.Table, sqlgraph.NewFieldSpec(car.FieldID, field.TypeInt))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type CarDeleteOne struct {
 	cd *CarDelete
 }
 
+// Where appends a list predicates to the CarDelete builder.
+func (cdo *CarDeleteOne) Where(ps ...predicate.Car) *CarDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *CarDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -88,5 +86,7 @@ func (cdo *CarDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CarDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

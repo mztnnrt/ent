@@ -39,9 +39,25 @@ func (gtu *GroupTagUpdate) SetTagID(i int) *GroupTagUpdate {
 	return gtu
 }
 
+// SetNillableTagID sets the "tag_id" field if the given value is not nil.
+func (gtu *GroupTagUpdate) SetNillableTagID(i *int) *GroupTagUpdate {
+	if i != nil {
+		gtu.SetTagID(*i)
+	}
+	return gtu
+}
+
 // SetGroupID sets the "group_id" field.
 func (gtu *GroupTagUpdate) SetGroupID(i int) *GroupTagUpdate {
 	gtu.mutation.SetGroupID(i)
+	return gtu
+}
+
+// SetNillableGroupID sets the "group_id" field if the given value is not nil.
+func (gtu *GroupTagUpdate) SetNillableGroupID(i *int) *GroupTagUpdate {
+	if i != nil {
+		gtu.SetGroupID(*i)
+	}
 	return gtu
 }
 
@@ -74,7 +90,7 @@ func (gtu *GroupTagUpdate) ClearGroup() *GroupTagUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gtu *GroupTagUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GroupTagMutation](ctx, gtu.sqlSave, gtu.mutation, gtu.hooks)
+	return withHooks(ctx, gtu.sqlSave, gtu.mutation, gtu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -114,16 +130,7 @@ func (gtu *GroupTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := gtu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   grouptag.Table,
-			Columns: grouptag.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: grouptag.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(grouptag.Table, grouptag.Columns, sqlgraph.NewFieldSpec(grouptag.FieldID, field.TypeInt))
 	if ps := gtu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -139,10 +146,7 @@ func (gtu *GroupTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{grouptag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -155,10 +159,7 @@ func (gtu *GroupTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{grouptag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -174,10 +175,7 @@ func (gtu *GroupTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{grouptag.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -190,10 +188,7 @@ func (gtu *GroupTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{grouptag.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -227,9 +222,25 @@ func (gtuo *GroupTagUpdateOne) SetTagID(i int) *GroupTagUpdateOne {
 	return gtuo
 }
 
+// SetNillableTagID sets the "tag_id" field if the given value is not nil.
+func (gtuo *GroupTagUpdateOne) SetNillableTagID(i *int) *GroupTagUpdateOne {
+	if i != nil {
+		gtuo.SetTagID(*i)
+	}
+	return gtuo
+}
+
 // SetGroupID sets the "group_id" field.
 func (gtuo *GroupTagUpdateOne) SetGroupID(i int) *GroupTagUpdateOne {
 	gtuo.mutation.SetGroupID(i)
+	return gtuo
+}
+
+// SetNillableGroupID sets the "group_id" field if the given value is not nil.
+func (gtuo *GroupTagUpdateOne) SetNillableGroupID(i *int) *GroupTagUpdateOne {
+	if i != nil {
+		gtuo.SetGroupID(*i)
+	}
 	return gtuo
 }
 
@@ -260,6 +271,12 @@ func (gtuo *GroupTagUpdateOne) ClearGroup() *GroupTagUpdateOne {
 	return gtuo
 }
 
+// Where appends a list predicates to the GroupTagUpdate builder.
+func (gtuo *GroupTagUpdateOne) Where(ps ...predicate.GroupTag) *GroupTagUpdateOne {
+	gtuo.mutation.Where(ps...)
+	return gtuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (gtuo *GroupTagUpdateOne) Select(field string, fields ...string) *GroupTagUpdateOne {
@@ -269,7 +286,7 @@ func (gtuo *GroupTagUpdateOne) Select(field string, fields ...string) *GroupTagU
 
 // Save executes the query and returns the updated GroupTag entity.
 func (gtuo *GroupTagUpdateOne) Save(ctx context.Context) (*GroupTag, error) {
-	return withHooks[*GroupTag, GroupTagMutation](ctx, gtuo.sqlSave, gtuo.mutation, gtuo.hooks)
+	return withHooks(ctx, gtuo.sqlSave, gtuo.mutation, gtuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -309,16 +326,7 @@ func (gtuo *GroupTagUpdateOne) sqlSave(ctx context.Context) (_node *GroupTag, er
 	if err := gtuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   grouptag.Table,
-			Columns: grouptag.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: grouptag.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(grouptag.Table, grouptag.Columns, sqlgraph.NewFieldSpec(grouptag.FieldID, field.TypeInt))
 	id, ok := gtuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GroupTag.id" for update`)}
@@ -351,10 +359,7 @@ func (gtuo *GroupTagUpdateOne) sqlSave(ctx context.Context) (_node *GroupTag, er
 			Columns: []string{grouptag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -367,10 +372,7 @@ func (gtuo *GroupTagUpdateOne) sqlSave(ctx context.Context) (_node *GroupTag, er
 			Columns: []string{grouptag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -386,10 +388,7 @@ func (gtuo *GroupTagUpdateOne) sqlSave(ctx context.Context) (_node *GroupTag, er
 			Columns: []string{grouptag.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -402,10 +401,7 @@ func (gtuo *GroupTagUpdateOne) sqlSave(ctx context.Context) (_node *GroupTag, er
 			Columns: []string{grouptag.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

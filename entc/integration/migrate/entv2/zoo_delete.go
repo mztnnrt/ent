@@ -31,7 +31,7 @@ func (zd *ZooDelete) Where(ps ...predicate.Zoo) *ZooDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (zd *ZooDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, ZooMutation](ctx, zd.sqlExec, zd.mutation, zd.hooks)
+	return withHooks(ctx, zd.sqlExec, zd.mutation, zd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (zd *ZooDelete) ExecX(ctx context.Context) int {
 }
 
 func (zd *ZooDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: zoo.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: zoo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(zoo.Table, sqlgraph.NewFieldSpec(zoo.FieldID, field.TypeInt))
 	if ps := zd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type ZooDeleteOne struct {
 	zd *ZooDelete
 }
 
+// Where appends a list predicates to the ZooDelete builder.
+func (zdo *ZooDeleteOne) Where(ps ...predicate.Zoo) *ZooDeleteOne {
+	zdo.zd.mutation.Where(ps...)
+	return zdo
+}
+
 // Exec executes the deletion query.
 func (zdo *ZooDeleteOne) Exec(ctx context.Context) error {
 	n, err := zdo.zd.Exec(ctx)
@@ -88,5 +86,7 @@ func (zdo *ZooDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (zdo *ZooDeleteOne) ExecX(ctx context.Context) {
-	zdo.zd.ExecX(ctx)
+	if err := zdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

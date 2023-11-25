@@ -31,7 +31,7 @@ func (ftd *FieldTypeDelete) Where(ps ...predicate.FieldType) *FieldTypeDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ftd *FieldTypeDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, FieldTypeMutation](ctx, ftd.sqlExec, ftd.mutation, ftd.hooks)
+	return withHooks(ctx, ftd.sqlExec, ftd.mutation, ftd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ftd *FieldTypeDelete) ExecX(ctx context.Context) int {
 }
 
 func (ftd *FieldTypeDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: fieldtype.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: fieldtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(fieldtype.Table, sqlgraph.NewFieldSpec(fieldtype.FieldID, field.TypeInt))
 	if ps := ftd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type FieldTypeDeleteOne struct {
 	ftd *FieldTypeDelete
 }
 
+// Where appends a list predicates to the FieldTypeDelete builder.
+func (ftdo *FieldTypeDeleteOne) Where(ps ...predicate.FieldType) *FieldTypeDeleteOne {
+	ftdo.ftd.mutation.Where(ps...)
+	return ftdo
+}
+
 // Exec executes the deletion query.
 func (ftdo *FieldTypeDeleteOne) Exec(ctx context.Context) error {
 	n, err := ftdo.ftd.Exec(ctx)
@@ -88,5 +86,7 @@ func (ftdo *FieldTypeDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ftdo *FieldTypeDeleteOne) ExecX(ctx context.Context) {
-	ftdo.ftd.ExecX(ctx)
+	if err := ftdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -92,7 +92,7 @@ func (rc *RelationshipCreate) Save(ctx context.Context) (*Relationship, error) {
 	if err := rc.defaults(); err != nil {
 		return nil, err
 	}
-	return withHooks[*Relationship, RelationshipMutation](ctx, rc.sqlSave, rc.mutation, rc.hooks)
+	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -163,9 +163,7 @@ func (rc *RelationshipCreate) sqlSave(ctx context.Context) (*Relationship, error
 func (rc *RelationshipCreate) createSpec() (*Relationship, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Relationship{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: relationship.Table,
-		}
+		_spec = sqlgraph.NewCreateSpec(relationship.Table, nil)
 	)
 	_spec.OnConflict = rc.conflict
 	if value, ok := rc.mutation.Weight(); ok {
@@ -180,10 +178,7 @@ func (rc *RelationshipCreate) createSpec() (*Relationship, *sqlgraph.CreateSpec)
 			Columns: []string{relationship.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -200,10 +195,7 @@ func (rc *RelationshipCreate) createSpec() (*Relationship, *sqlgraph.CreateSpec)
 			Columns: []string{relationship.RelativeColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -220,10 +212,7 @@ func (rc *RelationshipCreate) createSpec() (*Relationship, *sqlgraph.CreateSpec)
 			Columns: []string{relationship.InfoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: relationshipinfo.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(relationshipinfo.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -472,12 +461,16 @@ func (u *RelationshipUpsertOne) ExecX(ctx context.Context) {
 // RelationshipCreateBulk is the builder for creating many Relationship entities in bulk.
 type RelationshipCreateBulk struct {
 	config
+	err      error
 	builders []*RelationshipCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Relationship entities in the database.
 func (rcb *RelationshipCreateBulk) Save(ctx context.Context) ([]*Relationship, error) {
+	if rcb.err != nil {
+		return nil, rcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rcb.builders))
 	nodes := make([]*Relationship, len(rcb.builders))
 	mutators := make([]Mutator, len(rcb.builders))
@@ -494,8 +487,8 @@ func (rcb *RelationshipCreateBulk) Save(ctx context.Context) ([]*Relationship, e
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, rcb.builders[i+1].mutation)
 				} else {
@@ -703,6 +696,9 @@ func (u *RelationshipUpsertBulk) ClearInfoID() *RelationshipUpsertBulk {
 
 // Exec executes the query.
 func (u *RelationshipUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the RelationshipCreateBulk instead", i)

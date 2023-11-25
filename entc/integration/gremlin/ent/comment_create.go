@@ -101,7 +101,7 @@ func (cc *CommentCreate) Mutation() *CommentMutation {
 
 // Save creates the Comment in the database.
 func (cc *CommentCreate) Save(ctx context.Context) (*Comment, error) {
-	return withHooks[*Comment, CommentMutation](ctx, cc.gremlinSave, cc.mutation, cc.hooks)
+	return withHooks(ctx, cc.gremlinSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -149,13 +149,13 @@ func (cc *CommentCreate) gremlinSave(ctx context.Context) (*Comment, error) {
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	c := &Comment{config: cc.config}
-	if err := c.FromResponse(res); err != nil {
+	rnode := &Comment{config: cc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	cc.mutation.id = &c.ID
+	cc.mutation.id = &rnode.ID
 	cc.mutation.done = true
-	return c, nil
+	return rnode, nil
 }
 
 func (cc *CommentCreate) gremlin() *dsl.Traversal {
@@ -204,5 +204,6 @@ func (cc *CommentCreate) gremlin() *dsl.Traversal {
 // CommentCreateBulk is the builder for creating many Comment entities in bulk.
 type CommentCreateBulk struct {
 	config
+	err      error
 	builders []*CommentCreate
 }

@@ -18,7 +18,7 @@ in the LICENSE file in the root directory of this source tree.
 {{ define "dialect/sql/update" }}
 {{ $pkg := $.Scope.Package }}
 {{ $builder := pascal $.Scope.Builder }}
-{{ $receiver := receiver $builder }}
+{{ $receiver := $.Scope.Receiver }}
 {{ $mutation := print $receiver ".mutation" }}
 {{ $one := hasSuffix $builder "One" }}
 {{- $zero := 0 }}{{ if $one }}{{ $zero = "nil" }}{{ end }}
@@ -37,27 +37,14 @@ func ({{ $receiver }} *{{ $builder }}) sqlSave(ctx context.Context) ({{ $ret }} 
 			return {{ $ret }}, err
 		}
 	{{- end }}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: {{ $.Package }}.Table,
-			Columns: {{ $.Package }}.Columns,
-			{{- if $.HasOneFieldID }}
-				ID: &sqlgraph.FieldSpec{
-					Type: field.{{ $.ID.Type.ConstName }},
-					Column: {{ $.Package }}.{{ $.ID.Constant }},
-				},
-			{{- else }}
-				CompositeID: []*sqlgraph.FieldSpec{
-					{{- range $id := $.EdgeSchema.ID }}
-						{
-							Type: field.{{ $id.Type.ConstName }},
-							Column: {{ $.Package }}.{{ $id.Constant }},
-						},
-					{{- end }}
-				},
-			{{- end }}
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec({{ $.Package }}.Table, {{ $.Package }}.Columns,
+		{{- if $.HasOneFieldID -}}
+			sqlgraph.NewFieldSpec({{ $.Package }}.{{ $.ID.Constant }}, field.{{ $.ID.Type.ConstName }})
+		{{- else -}}
+			{{- range $id := $.EdgeSchema.ID -}}
+				sqlgraph.NewFieldSpec({{ $.Package }}.{{ $id.Constant }}, field.{{ $id.Type.ConstName }}),
+			{{- end -}}
+		{{- end }})
 	{{- if $one }}
 		{{- if $.HasOneFieldID }}
 			id, ok := {{ $mutation }}.{{ $.ID.MutationGet }}()
@@ -106,11 +93,27 @@ func ({{ $receiver }} *{{ $builder }}) sqlSave(ctx context.Context) ({{ $ret }} 
 	{{- range $f := $.MutationFields }}
 			{{- if or (not $f.Immutable) $f.UpdateDefault }}
 				if value, ok := {{ $mutation }}.{{ $f.MutationGet }}(); ok {
-					_spec.SetField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, value)
+					{{- if $f.HasValueScanner }}
+						vv, err := {{ $f.ValueFunc }}(value)
+						if err != nil {
+							return {{ $zero }}, err
+						}
+						_spec.SetField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, vv)
+					{{- else }}
+						_spec.SetField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, value)
+					{{- end }}
 				}
 				{{- if $f.SupportsMutationAdd }}
 					if value, ok := {{ $mutation }}.{{ $f.MutationAdded }}(); ok {
-						_spec.AddField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, value)
+						{{- if $f.HasValueScanner }}
+							vv, err := {{ $f.ValueFunc }}(value)
+							if err != nil {
+								return {{ $zero }}, err
+							}
+							_spec.AddField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, vv)
+						{{- else }}
+							_spec.AddField({{ $.Package }}.{{ $f.Constant }}, field.{{ $f.Type.ConstName }}, value)
+						{{- end }}
 					}
 				{{- end }}
 				{{- if $f.SupportsMutationAppend }}
@@ -130,7 +133,7 @@ func ({{ $receiver }} *{{ $builder }}) sqlSave(ctx context.Context) ({{ $ret }} 
 	{{- range $e := $.EdgesWithID }}
 		{{- if $e.Immutable }}
 			{{- /* Skip to the next one as immutable edges cannot be updated. */}}
-			{{- continue}}
+			{{- continue }}
 		{{- end }}
 		if {{ $mutation }}.{{ $e.MutationCleared }}() {
 			{{- with extend $ "Edge" $e }}
@@ -183,7 +186,7 @@ func ({{ $receiver }} *{{ $builder }}) sqlSave(ctx context.Context) ({{ $ret }} 
 
 {{ define "dialect/sql/defedge" }}
 	{{- $e := $.Scope.Edge -}}
-	{{- $receiver := pascal $.Scope.Builder | receiver -}}
+	{{- $receiver := $.Scope.Receiver -}}
 	edge := &sqlgraph.EdgeSpec{
 		Rel: sqlgraph.{{ $e.Rel.Type }},
 		Inverse: {{ $e.IsInverse }},
@@ -191,10 +194,7 @@ func ({{ $receiver }} *{{ $builder }}) sqlSave(ctx context.Context) ({{ $ret }} 
 		Columns: {{ if $e.M2M }}{{ $.Package }}.{{ $e.PKConstant }}{{ else }}[]string{ {{ $.Package }}.{{ $e.ColumnConstant }} }{{ end }},
 		Bidi: {{ $e.Bidi }},
 		Target: &sqlgraph.EdgeTarget{
-			IDSpec: &sqlgraph.FieldSpec{
-				Type: field.{{ $e.Type.ID.Type.ConstName }},
-				Column: {{ $e.Type.Package }}.{{ $e.Type.ID.Constant }},
-			},
+			IDSpec: sqlgraph.NewFieldSpec({{ $e.Type.Package }}.{{ $e.Type.ID.Constant }}, field.{{ $e.Type.ID.Type.ConstName }}),
 		},
 	}
 	{{- /* Allow mutating the sqlgraph.EdgeSpec by ent extensions or user templates.*/}}

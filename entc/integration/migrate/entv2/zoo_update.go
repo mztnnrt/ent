@@ -38,7 +38,7 @@ func (zu *ZooUpdate) Mutation() *ZooMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (zu *ZooUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, ZooMutation](ctx, zu.sqlSave, zu.mutation, zu.hooks)
+	return withHooks(ctx, zu.sqlSave, zu.mutation, zu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -64,16 +64,7 @@ func (zu *ZooUpdate) ExecX(ctx context.Context) {
 }
 
 func (zu *ZooUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   zoo.Table,
-			Columns: zoo.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: zoo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(zoo.Table, zoo.Columns, sqlgraph.NewFieldSpec(zoo.FieldID, field.TypeInt))
 	if ps := zu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -106,6 +97,12 @@ func (zuo *ZooUpdateOne) Mutation() *ZooMutation {
 	return zuo.mutation
 }
 
+// Where appends a list predicates to the ZooUpdate builder.
+func (zuo *ZooUpdateOne) Where(ps ...predicate.Zoo) *ZooUpdateOne {
+	zuo.mutation.Where(ps...)
+	return zuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (zuo *ZooUpdateOne) Select(field string, fields ...string) *ZooUpdateOne {
@@ -115,7 +112,7 @@ func (zuo *ZooUpdateOne) Select(field string, fields ...string) *ZooUpdateOne {
 
 // Save executes the query and returns the updated Zoo entity.
 func (zuo *ZooUpdateOne) Save(ctx context.Context) (*Zoo, error) {
-	return withHooks[*Zoo, ZooMutation](ctx, zuo.sqlSave, zuo.mutation, zuo.hooks)
+	return withHooks(ctx, zuo.sqlSave, zuo.mutation, zuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -141,16 +138,7 @@ func (zuo *ZooUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (zuo *ZooUpdateOne) sqlSave(ctx context.Context) (_node *Zoo, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   zoo.Table,
-			Columns: zoo.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: zoo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(zoo.Table, zoo.Columns, sqlgraph.NewFieldSpec(zoo.FieldID, field.TypeInt))
 	id, ok := zuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`entv2: missing "Zoo.id" for update`)}

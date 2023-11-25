@@ -166,11 +166,7 @@ func HasPost() predicate.Comment {
 // HasPostWith applies the HasEdge predicate on the "post" edge with a given conditions (other predicates).
 func HasPostWith(preds ...predicate.Post) predicate.Comment {
 	return predicate.Comment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PostInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, PostTable, PostColumn),
-		)
+		step := newPostStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -181,32 +177,15 @@ func HasPostWith(preds ...predicate.Post) predicate.Comment {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Comment) predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Comment(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Comment) predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Comment(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Comment) predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Comment(sql.NotPredicates(p))
 }

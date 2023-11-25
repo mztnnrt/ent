@@ -31,7 +31,7 @@ func (ld *LicenseDelete) Where(ps ...predicate.License) *LicenseDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ld *LicenseDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, LicenseMutation](ctx, ld.sqlExec, ld.mutation, ld.hooks)
+	return withHooks(ctx, ld.sqlExec, ld.mutation, ld.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ld *LicenseDelete) ExecX(ctx context.Context) int {
 }
 
 func (ld *LicenseDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: license.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: license.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(license.Table, sqlgraph.NewFieldSpec(license.FieldID, field.TypeInt))
 	if ps := ld.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type LicenseDeleteOne struct {
 	ld *LicenseDelete
 }
 
+// Where appends a list predicates to the LicenseDelete builder.
+func (ldo *LicenseDeleteOne) Where(ps ...predicate.License) *LicenseDeleteOne {
+	ldo.ld.mutation.Where(ps...)
+	return ldo
+}
+
 // Exec executes the deletion query.
 func (ldo *LicenseDeleteOne) Exec(ctx context.Context) error {
 	n, err := ldo.ld.Exec(ctx)
@@ -88,5 +86,7 @@ func (ldo *LicenseDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ldo *LicenseDeleteOne) ExecX(ctx context.Context) {
-	ldo.ld.ExecX(ctx)
+	if err := ldo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

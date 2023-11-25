@@ -39,6 +39,14 @@ func (ftu *FileTypeUpdate) SetName(s string) *FileTypeUpdate {
 	return ftu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ftu *FileTypeUpdate) SetNillableName(s *string) *FileTypeUpdate {
+	if s != nil {
+		ftu.SetName(*s)
+	}
+	return ftu
+}
+
 // SetType sets the "type" field.
 func (ftu *FileTypeUpdate) SetType(f filetype.Type) *FileTypeUpdate {
 	ftu.mutation.SetType(f)
@@ -110,7 +118,7 @@ func (ftu *FileTypeUpdate) RemoveFiles(f ...*File) *FileTypeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ftu *FileTypeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, FileTypeMutation](ctx, ftu.sqlSave, ftu.mutation, ftu.hooks)
+	return withHooks(ctx, ftu.sqlSave, ftu.mutation, ftu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -160,16 +168,7 @@ func (ftu *FileTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ftu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   filetype.Table,
-			Columns: filetype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: filetype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(filetype.Table, filetype.Columns, sqlgraph.NewFieldSpec(filetype.FieldID, field.TypeInt))
 	if ps := ftu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -194,10 +193,7 @@ func (ftu *FileTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -210,10 +206,7 @@ func (ftu *FileTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -229,10 +222,7 @@ func (ftu *FileTypeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -265,6 +255,14 @@ type FileTypeUpdateOne struct {
 // SetName sets the "name" field.
 func (ftuo *FileTypeUpdateOne) SetName(s string) *FileTypeUpdateOne {
 	ftuo.mutation.SetName(s)
+	return ftuo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ftuo *FileTypeUpdateOne) SetNillableName(s *string) *FileTypeUpdateOne {
+	if s != nil {
+		ftuo.SetName(*s)
+	}
 	return ftuo
 }
 
@@ -337,6 +335,12 @@ func (ftuo *FileTypeUpdateOne) RemoveFiles(f ...*File) *FileTypeUpdateOne {
 	return ftuo.RemoveFileIDs(ids...)
 }
 
+// Where appends a list predicates to the FileTypeUpdate builder.
+func (ftuo *FileTypeUpdateOne) Where(ps ...predicate.FileType) *FileTypeUpdateOne {
+	ftuo.mutation.Where(ps...)
+	return ftuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ftuo *FileTypeUpdateOne) Select(field string, fields ...string) *FileTypeUpdateOne {
@@ -346,7 +350,7 @@ func (ftuo *FileTypeUpdateOne) Select(field string, fields ...string) *FileTypeU
 
 // Save executes the query and returns the updated FileType entity.
 func (ftuo *FileTypeUpdateOne) Save(ctx context.Context) (*FileType, error) {
-	return withHooks[*FileType, FileTypeMutation](ctx, ftuo.sqlSave, ftuo.mutation, ftuo.hooks)
+	return withHooks(ctx, ftuo.sqlSave, ftuo.mutation, ftuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -396,16 +400,7 @@ func (ftuo *FileTypeUpdateOne) sqlSave(ctx context.Context) (_node *FileType, er
 	if err := ftuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   filetype.Table,
-			Columns: filetype.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: filetype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(filetype.Table, filetype.Columns, sqlgraph.NewFieldSpec(filetype.FieldID, field.TypeInt))
 	id, ok := ftuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "FileType.id" for update`)}
@@ -447,10 +442,7 @@ func (ftuo *FileTypeUpdateOne) sqlSave(ctx context.Context) (_node *FileType, er
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -463,10 +455,7 @@ func (ftuo *FileTypeUpdateOne) sqlSave(ctx context.Context) (_node *FileType, er
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -482,10 +471,7 @@ func (ftuo *FileTypeUpdateOne) sqlSave(ctx context.Context) (_node *FileType, er
 			Columns: []string{filetype.FilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: file.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

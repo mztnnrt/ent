@@ -23,6 +23,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/entc/load"
+	entschema "entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
@@ -257,8 +258,11 @@ func NewType(c *Config, schema *load.Schema) (*Type, error) {
 		}
 		// User defined id field.
 		if tf.Name == typ.ID.Name {
-			if tf.Optional {
+			switch {
+			case tf.Optional:
 				return nil, errors.New("id field cannot be optional")
+			case f.ValueScanner:
+				return nil, errors.New("id field cannot have an external ValueScanner")
 			}
 			typ.ID = tf
 		} else {
@@ -325,7 +329,11 @@ func (t Type) PackageAlias() string { return t.alias }
 // Receiver returns the receiver name of this node. It makes sure the
 // receiver names doesn't conflict with import names.
 func (t Type) Receiver() string {
-	return receiver(t.Name)
+	r := receiver(t.Name)
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
 }
 
 // hasEdge returns true if this type as an edge (reverse or assoc)
@@ -750,11 +758,11 @@ func (t *Type) setupFKs() error {
 func (t *Type) setupFieldEdge(fk *ForeignKey, fkOwner *Edge, fkName string) error {
 	tf, ok := t.fields[fkName]
 	if !ok {
-		return fmt.Errorf("field %q was not found in the schema for edge %q", fkName, fkOwner.Name)
+		return fmt.Errorf("field %q was not found in %s.Fields() for edge %q", fkName, t.Name, fkOwner.Name)
 	}
 	switch tf, ok := t.fields[fkName]; {
 	case !ok:
-		return fmt.Errorf("field %q was not found in the schema for edge %q", fkName, fkOwner.Name)
+		return fmt.Errorf("field %q was not found in %s.Fields() for edge %q", fkName, t.Name, fkOwner.Name)
 	case tf.Optional && !fkOwner.Optional:
 		return fmt.Errorf("edge-field %q was set as Optional, but edge %q is not", fkName, fkOwner.Name)
 	case !tf.Optional && fkOwner.Optional:
@@ -763,6 +771,8 @@ func (t *Type) setupFieldEdge(fk *ForeignKey, fkOwner *Edge, fkName string) erro
 		return fmt.Errorf("edge-field %q was set as Immutable, but edge %q is not", fkName, fkOwner.Name)
 	case !tf.Immutable && fkOwner.Immutable:
 		return fmt.Errorf("edge %q was set as Immutable, but edge-field %q is not", fkOwner.Name, fkName)
+	case tf.HasValueScanner():
+		return fmt.Errorf("edge-field %q cannot have an external ValueScanner", fkName)
 	}
 	if t1, t2 := tf.Type.Type, fkOwner.Type.ID.Type.Type; t1 != t2 {
 		return fmt.Errorf("mismatch field type between edge field %q and id of type %q (%s != %s)", fkName, fkOwner.Type.Name, t1, t2)
@@ -816,9 +826,27 @@ func (t Type) CreateName() string {
 	return pascal(t.Name) + "Create"
 }
 
+// CreateReceiver returns the receiver name of the create-builder for this type.
+func (t Type) CreateReceiver() string {
+	r := receiver(t.CreateName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
+}
+
 // CreateBulkName returns the struct name denoting the create-bulk-builder for this type.
 func (t Type) CreateBulkName() string {
 	return pascal(t.Name) + "CreateBulk"
+}
+
+// CreateBulReceiver returns the receiver name of the create-bulk-builder for this type.
+func (t Type) CreateBulReceiver() string {
+	r := receiver(t.CreateBulkName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
 }
 
 // UpdateName returns the struct name denoting the update-builder for this type.
@@ -826,9 +854,27 @@ func (t Type) UpdateName() string {
 	return pascal(t.Name) + "Update"
 }
 
+// UpdateReceiver returns the receiver name of the update-builder for this type.
+func (t Type) UpdateReceiver() string {
+	r := receiver(t.UpdateName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
+}
+
 // UpdateOneName returns the struct name denoting the update-one-builder for this type.
 func (t Type) UpdateOneName() string {
 	return pascal(t.Name) + "UpdateOne"
+}
+
+// UpdateOneReceiver returns the receiver name of the update-one-builder for this type.
+func (t Type) UpdateOneReceiver() string {
+	r := receiver(t.UpdateOneName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
 }
 
 // DeleteName returns the struct name denoting the delete-builder for this type.
@@ -836,9 +882,27 @@ func (t Type) DeleteName() string {
 	return pascal(t.Name) + "Delete"
 }
 
+// DeleteReceiver returns the receiver name of the delete-builder for this type.
+func (t Type) DeleteReceiver() string {
+	r := receiver(t.DeleteName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
+}
+
 // DeleteOneName returns the struct name denoting the delete-one-builder for this type.
 func (t Type) DeleteOneName() string {
 	return pascal(t.Name) + "DeleteOne"
+}
+
+// DeleteOneReceiver returns the receiver name of the delete-one-builder for this type.
+func (t Type) DeleteOneReceiver() string {
+	r := receiver(t.DeleteOneName())
+	if t.Package() == r {
+		return "_" + r
+	}
+	return r
 }
 
 // MutationName returns the struct name of the mutation builder for this type.
@@ -849,6 +913,14 @@ func (t Type) MutationName() string {
 // TypeName returns the constant name of the type defined in mutation.go.
 func (t Type) TypeName() string {
 	return "Type" + pascal(t.Name)
+}
+
+// ValueName returns the name of the value method for this type.
+func (t Type) ValueName() string {
+	if t.fields["Value"] == nil && t.fields["value"] == nil {
+		return "Value"
+	}
+	return "GetValue"
 }
 
 // SiblingImports returns all sibling packages that are needed for the different builders.
@@ -967,10 +1039,12 @@ func (t *Type) checkField(tf *Field, f *load.Field) (err error) {
 			// Enum types should be named as follows: typepkg.Field.
 			f.Info.Ident = fmt.Sprintf("%s.%s", t.PackageDir(), pascal(f.Name))
 		}
-	case tf.Validators > 0 && !tf.ConvertedToBasic():
+	case tf.Validators > 0 && !tf.ConvertedToBasic() && f.Info.Type != field.TypeJSON:
 		err = fmt.Errorf("GoType %q for field %q must be converted to the basic %q type for validators", tf.Type, f.Name, tf.Type.Type)
 	case ant != nil && ant.Default != "" && (ant.DefaultExpr != "" || ant.DefaultExprs != nil):
 		err = fmt.Errorf("field %q cannot have both default value and default expression annotations", f.Name)
+	case tf.HasValueScanner() && tf.IsJSON():
+		err = fmt.Errorf("json field %q cannot have an external ValueScanner", f.Name)
 	}
 	return err
 }
@@ -1018,6 +1092,21 @@ func aliases(g *Graph) {
 	}
 }
 
+// sqlComment returns the SQL database comment for the node (table), if defined and enabled.
+func (t Type) sqlComment() string {
+	if ant := t.EntSQL(); ant == nil || ant.WithComments == nil || !*ant.WithComments {
+		return ""
+	}
+	ant := &entschema.CommentAnnotation{}
+	if t.Annotations == nil || t.Annotations[ant.Name()] == nil {
+		return ""
+	}
+	if b, err := json.Marshal(t.Annotations[ant.Name()]); err == nil {
+		_ = json.Unmarshal(b, &ant)
+	}
+	return ant.Text
+}
+
 // Constant returns the constant name of the field.
 func (f Field) Constant() string {
 	return "Field" + pascal(f.Name)
@@ -1034,6 +1123,22 @@ func (f Field) DefaultValue() any { return f.def.DefaultValue }
 
 // DefaultFunc returns a bool stating if the default value is a func. Invoked by the template.
 func (f Field) DefaultFunc() bool { return f.def.DefaultKind == reflect.Func }
+
+// OrderName returns the function/option name for ordering by this field.
+func (f Field) OrderName() string {
+	name := "By" + pascal(f.Name)
+	// Some users store associations count as a separate field.
+	// In this case, we suffix the order name with "Field".
+	if f.typ == nil || !strings.HasSuffix(name, "Count") {
+		return name
+	}
+	for _, e := range f.typ.Edges {
+		if nameE, err := e.OrderCountName(); err == nil && nameE == name {
+			return name + "Field"
+		}
+	}
+	return name
+}
 
 // BuilderField returns the struct member of the field in the builder.
 func (f Field) BuilderField() string {
@@ -1310,8 +1415,47 @@ func (f Field) ScanType() string {
 	return f.Type.String()
 }
 
-// NewScanType returns an expression for creating an new object
-// to be used by the `rows.Scan` method. An sql.Scanner or a
+// HasValueScanner reports if any of the fields has (an external) ValueScanner.
+func (t Type) HasValueScanner() bool {
+	for _, f := range t.Fields {
+		if f.HasValueScanner() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasValueScanner indicates if the field has (an external) ValueScanner.
+func (f Field) HasValueScanner() bool {
+	return f.def != nil && f.def.ValueScanner
+}
+
+// ValueFunc returns a path to the Value field (func) of the external ValueScanner.
+func (f Field) ValueFunc() (string, error) {
+	if !f.HasValueScanner() {
+		return "", fmt.Errorf("%q does not have an external ValueScanner", f.Name)
+	}
+	return fmt.Sprintf("%s.ValueScanner.%s.Value", f.typ.Package(), f.StructField()), nil
+}
+
+// ScanValueFunc returns a path to the ScanValue field (func) of the external ValueScanner.
+func (f Field) ScanValueFunc() (string, error) {
+	if !f.HasValueScanner() {
+		return "", fmt.Errorf("%q does not have an external ValueScanner", f.Name)
+	}
+	return fmt.Sprintf("%s.ValueScanner.%s.ScanValue", f.typ.Package(), f.StructField()), nil
+}
+
+// FromValueFunc returns a path to the FromValue field (func) of the external ValueScanner.
+func (f Field) FromValueFunc() (string, error) {
+	if !f.HasValueScanner() {
+		return "", fmt.Errorf("%q does not have an external ValueScanner", f.Name)
+	}
+	return fmt.Sprintf("%s.ValueScanner.%s.FromValue", f.typ.Package(), f.StructField()), nil
+}
+
+// NewScanType returns an expression for creating a new object
+// to be used by the `rows.Scan` method. A sql.Scanner or a
 // nillable-type supported by the SQL driver (e.g. []byte).
 func (f Field) NewScanType() string {
 	if f.Type.ValueScanner() {
@@ -1660,6 +1804,8 @@ func (f Field) BasicType(ident string) (expr string) {
 		case rt.TypeEqual(nullStringType) || rt.TypeEqual(nullStringPType):
 			expr = fmt.Sprintf("%s.String", ident)
 		}
+	case field.TypeJSON:
+		expr = ident
 	default:
 		if t.Numeric() && rt.Kind >= reflect.Int && rt.Kind <= reflect.Float64 {
 			expr = fmt.Sprintf("%s(%s)", rt.Kind, ident)
@@ -1707,7 +1853,7 @@ func (f Field) enums(lf *load.Field) ([]Enum, error) {
 // Ops returns all predicate operations of the field.
 func (f *Field) Ops() []Op {
 	ops := fieldOps(f)
-	if f.Name != "id" && f.cfg != nil && f.cfg.Storage.Ops != nil {
+	if (f.Name != "id" || !f.HasGoType()) && f.cfg != nil && f.cfg.Storage.Ops != nil {
 		ops = append(ops, f.cfg.Storage.Ops(f)...)
 	}
 	return ops
@@ -1904,6 +2050,30 @@ func (e Edge) MutationCleared() string {
 	return name
 }
 
+// OrderCountName returns the function/option name for ordering by the edge count.
+func (e Edge) OrderCountName() (string, error) {
+	if e.Unique {
+		return "", fmt.Errorf("edge %q is unique", e.Name)
+	}
+	return fmt.Sprintf("By%sCount", pascal(e.Name)), nil
+}
+
+// OrderTermsName returns the function/option name for ordering by any term.
+func (e Edge) OrderTermsName() (string, error) {
+	if e.Unique {
+		return "", fmt.Errorf("edge %q is unique", e.Name)
+	}
+	return fmt.Sprintf("By%s", pascal(e.Name)), nil
+}
+
+// OrderFieldName returns the function/option name for ordering by edge field.
+func (e Edge) OrderFieldName() (string, error) {
+	if !e.Unique {
+		return "", fmt.Errorf("edge %q is not-unique", e.Name)
+	}
+	return fmt.Sprintf("By%sField", pascal(e.Name)), nil
+}
+
 // setStorageKey sets the storage-key option in the schema or fail.
 func (e *Edge) setStorageKey() error {
 	key, err := e.StorageKey()
@@ -2086,6 +2256,7 @@ var (
 	// private fields used by the different builders.
 	privateField = names(
 		"config",
+		"ctx",
 		"done",
 		"hooks",
 		"inters",

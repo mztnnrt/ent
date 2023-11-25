@@ -32,7 +32,7 @@ func (cd *CardDelete) Where(ps ...predicate.Card) *CardDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *CardDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, CardMutation](ctx, cd.gremlinExec, cd.mutation, cd.hooks)
+	return withHooks(ctx, cd.gremlinExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -67,6 +67,12 @@ type CardDeleteOne struct {
 	cd *CardDelete
 }
 
+// Where appends a list predicates to the CardDelete builder.
+func (cdo *CardDeleteOne) Where(ps ...predicate.Card) *CardDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *CardDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -82,5 +88,7 @@ func (cdo *CardDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CardDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

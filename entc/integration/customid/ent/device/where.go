@@ -72,11 +72,7 @@ func HasActiveSession() predicate.Device {
 // HasActiveSessionWith applies the HasEdge predicate on the "active_session" edge with a given conditions (other predicates).
 func HasActiveSessionWith(preds ...predicate.Session) predicate.Device {
 	return predicate.Device(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ActiveSessionInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ActiveSessionTable, ActiveSessionColumn),
-		)
+		step := newActiveSessionStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -99,11 +95,7 @@ func HasSessions() predicate.Device {
 // HasSessionsWith applies the HasEdge predicate on the "sessions" edge with a given conditions (other predicates).
 func HasSessionsWith(preds ...predicate.Session) predicate.Device {
 	return predicate.Device(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SessionsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
-		)
+		step := newSessionsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -114,32 +106,15 @@ func HasSessionsWith(preds ...predicate.Session) predicate.Device {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Device) predicate.Device {
-	return predicate.Device(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Device(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Device) predicate.Device {
-	return predicate.Device(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Device(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Device) predicate.Device {
-	return predicate.Device(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Device(sql.NotPredicates(p))
 }

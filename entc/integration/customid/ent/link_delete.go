@@ -31,7 +31,7 @@ func (ld *LinkDelete) Where(ps ...predicate.Link) *LinkDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ld *LinkDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, LinkMutation](ctx, ld.sqlExec, ld.mutation, ld.hooks)
+	return withHooks(ctx, ld.sqlExec, ld.mutation, ld.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ld *LinkDelete) ExecX(ctx context.Context) int {
 }
 
 func (ld *LinkDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: link.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: link.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(link.Table, sqlgraph.NewFieldSpec(link.FieldID, field.TypeUUID))
 	if ps := ld.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type LinkDeleteOne struct {
 	ld *LinkDelete
 }
 
+// Where appends a list predicates to the LinkDelete builder.
+func (ldo *LinkDeleteOne) Where(ps ...predicate.Link) *LinkDeleteOne {
+	ldo.ld.mutation.Where(ps...)
+	return ldo
+}
+
 // Exec executes the deletion query.
 func (ldo *LinkDeleteOne) Exec(ctx context.Context) error {
 	n, err := ldo.ld.Exec(ctx)
@@ -88,5 +86,7 @@ func (ldo *LinkDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ldo *LinkDeleteOne) ExecX(ctx context.Context) {
-	ldo.ld.ExecX(ctx)
+	if err := ldo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

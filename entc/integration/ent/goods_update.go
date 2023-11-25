@@ -39,7 +39,7 @@ func (gu *GoodsUpdate) Mutation() *GoodsMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gu *GoodsUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GoodsMutation](ctx, gu.sqlSave, gu.mutation, gu.hooks)
+	return withHooks(ctx, gu.sqlSave, gu.mutation, gu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -71,16 +71,7 @@ func (gu *GoodsUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *GoodsUpd
 }
 
 func (gu *GoodsUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   goods.Table,
-			Columns: goods.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: goods.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(goods.Table, goods.Columns, sqlgraph.NewFieldSpec(goods.FieldID, field.TypeInt))
 	if ps := gu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -115,6 +106,12 @@ func (guo *GoodsUpdateOne) Mutation() *GoodsMutation {
 	return guo.mutation
 }
 
+// Where appends a list predicates to the GoodsUpdate builder.
+func (guo *GoodsUpdateOne) Where(ps ...predicate.Goods) *GoodsUpdateOne {
+	guo.mutation.Where(ps...)
+	return guo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (guo *GoodsUpdateOne) Select(field string, fields ...string) *GoodsUpdateOne {
@@ -124,7 +121,7 @@ func (guo *GoodsUpdateOne) Select(field string, fields ...string) *GoodsUpdateOn
 
 // Save executes the query and returns the updated Goods entity.
 func (guo *GoodsUpdateOne) Save(ctx context.Context) (*Goods, error) {
-	return withHooks[*Goods, GoodsMutation](ctx, guo.sqlSave, guo.mutation, guo.hooks)
+	return withHooks(ctx, guo.sqlSave, guo.mutation, guo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -156,16 +153,7 @@ func (guo *GoodsUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *Good
 }
 
 func (guo *GoodsUpdateOne) sqlSave(ctx context.Context) (_node *Goods, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   goods.Table,
-			Columns: goods.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: goods.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(goods.Table, goods.Columns, sqlgraph.NewFieldSpec(goods.FieldID, field.TypeInt))
 	id, ok := guo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Goods.id" for update`)}

@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -142,12 +143,29 @@ func NewStep(opts ...StepOption) *Step {
 	return s
 }
 
+// FromEdgeOwner returns true if the step is from an edge owner.
+// i.e., from the table that holds the foreign-key.
+func (s *Step) FromEdgeOwner() bool {
+	return s.Edge.Rel == M2O || (s.Edge.Rel == O2O && s.Edge.Inverse)
+}
+
+// ToEdgeOwner returns true if the step is to an edge owner.
+// i.e., to the table that holds the foreign-key.
+func (s *Step) ToEdgeOwner() bool {
+	return s.Edge.Rel == O2M || (s.Edge.Rel == O2O && !s.Edge.Inverse)
+}
+
+// ThroughEdgeTable returns true if the step is through a join-table.
+func (s *Step) ThroughEdgeTable() bool {
+	return s.Edge.Rel == M2M
+}
+
 // Neighbors returns a Selector for evaluating the path-step
 // and getting the neighbors of one vertex.
 func Neighbors(dialect string, s *Step) (q *sql.Selector) {
 	builder := sql.Dialect(dialect)
-	switch r := s.Edge.Rel; {
-	case r == M2M:
+	switch {
+	case s.ThroughEdgeTable():
 		pk1, pk2 := s.Edge.Columns[1], s.Edge.Columns[0]
 		if s.Edge.Inverse {
 			pk1, pk2 = pk2, pk1
@@ -161,7 +179,7 @@ func Neighbors(dialect string, s *Step) (q *sql.Selector) {
 			From(to).
 			Join(match).
 			On(to.C(s.To.Column), match.C(pk1))
-	case r == M2O || (r == O2O && s.Edge.Inverse):
+	case s.FromEdgeOwner():
 		t1 := builder.Table(s.To.Table).Schema(s.To.Schema)
 		t2 := builder.Select(s.Edge.Columns[0]).
 			From(builder.Table(s.Edge.Table).Schema(s.Edge.Schema)).
@@ -170,7 +188,7 @@ func Neighbors(dialect string, s *Step) (q *sql.Selector) {
 			From(t1).
 			Join(t2).
 			On(t1.C(s.To.Column), t2.C(s.Edge.Columns[0]))
-	case r == O2M || (r == O2O && !s.Edge.Inverse):
+	case s.ToEdgeOwner():
 		q = builder.Select().
 			From(builder.Table(s.To.Table).Schema(s.To.Schema)).
 			Where(sql.EQ(s.Edge.Columns[0], s.From.V))
@@ -183,8 +201,8 @@ func Neighbors(dialect string, s *Step) (q *sql.Selector) {
 func SetNeighbors(dialect string, s *Step) (q *sql.Selector) {
 	set := s.From.V.(*sql.Selector)
 	builder := sql.Dialect(dialect)
-	switch r := s.Edge.Rel; {
-	case r == M2M:
+	switch {
+	case s.ThroughEdgeTable():
 		pk1, pk2 := s.Edge.Columns[1], s.Edge.Columns[0]
 		if s.Edge.Inverse {
 			pk1, pk2 = pk2, pk1
@@ -200,14 +218,14 @@ func SetNeighbors(dialect string, s *Step) (q *sql.Selector) {
 			From(to).
 			Join(match).
 			On(to.C(s.To.Column), match.C(pk1))
-	case r == M2O || (r == O2O && s.Edge.Inverse):
+	case s.FromEdgeOwner():
 		t1 := builder.Table(s.To.Table).Schema(s.To.Schema)
 		set.Select(set.C(s.Edge.Columns[0]))
 		q = builder.Select().
 			From(t1).
 			Join(set).
 			On(t1.C(s.To.Column), set.C(s.Edge.Columns[0]))
-	case r == O2M || (r == O2O && !s.Edge.Inverse):
+	case s.ToEdgeOwner():
 		t1 := builder.Table(s.To.Table).Schema(s.To.Schema)
 		set.Select(set.C(s.From.Column))
 		q = builder.Select().
@@ -221,8 +239,8 @@ func SetNeighbors(dialect string, s *Step) (q *sql.Selector) {
 // HasNeighbors applies on the given Selector a neighbors check.
 func HasNeighbors(q *sql.Selector, s *Step) {
 	builder := sql.Dialect(q.Dialect())
-	switch r := s.Edge.Rel; {
-	case r == M2M:
+	switch {
+	case s.ThroughEdgeTable():
 		pk1 := s.Edge.Columns[0]
 		if s.Edge.Inverse {
 			pk1 = s.Edge.Columns[1]
@@ -234,16 +252,25 @@ func HasNeighbors(q *sql.Selector, s *Step) {
 				builder.Select(join.C(pk1)).From(join),
 			),
 		)
-	case r == M2O || (r == O2O && s.Edge.Inverse):
+	case s.FromEdgeOwner():
 		q.Where(sql.NotNull(q.C(s.Edge.Columns[0])))
-	case r == O2M || (r == O2O && !s.Edge.Inverse):
+	case s.ToEdgeOwner():
 		to := builder.Table(s.Edge.Table).Schema(s.Edge.Schema)
+		// In case the edge reside on the same table, give
+		// the edge an alias to make qualifier different.
+		if s.From.Table == s.Edge.Table {
+			to.As(fmt.Sprintf("%s_edge", s.Edge.Table))
+		}
 		q.Where(
-			sql.In(
-				q.C(s.From.Column),
+			sql.Exists(
 				builder.Select(to.C(s.Edge.Columns[0])).
 					From(to).
-					Where(sql.NotNull(to.C(s.Edge.Columns[0]))),
+					Where(
+						sql.ColumnsEQ(
+							q.C(s.From.Column),
+							to.C(s.Edge.Columns[0]),
+						),
+					),
 			),
 		)
 	}
@@ -253,8 +280,8 @@ func HasNeighbors(q *sql.Selector, s *Step) {
 // The given predicate applies its filtering on the selector.
 func HasNeighborsWith(q *sql.Selector, s *Step, pred func(*sql.Selector)) {
 	builder := sql.Dialect(q.Dialect())
-	switch r := s.Edge.Rel; {
-	case r == M2M:
+	switch {
+	case s.ThroughEdgeTable():
 		pk1, pk2 := s.Edge.Columns[1], s.Edge.Columns[0]
 		if s.Edge.Inverse {
 			pk1, pk2 = pk2, pk1
@@ -270,20 +297,289 @@ func HasNeighborsWith(q *sql.Selector, s *Step, pred func(*sql.Selector)) {
 		pred(matches)
 		join.FromSelect(matches)
 		q.Where(sql.In(q.C(s.From.Column), join))
-	case r == M2O || (r == O2O && s.Edge.Inverse):
+	case s.FromEdgeOwner():
 		to := builder.Table(s.To.Table).Schema(s.To.Schema)
 		matches := builder.Select(to.C(s.To.Column)).
 			From(to)
 		matches.WithContext(q.Context())
 		pred(matches)
 		q.Where(sql.In(q.C(s.Edge.Columns[0]), matches))
-	case r == O2M || (r == O2O && !s.Edge.Inverse):
+	case s.ToEdgeOwner():
 		to := builder.Table(s.Edge.Table).Schema(s.Edge.Schema)
 		matches := builder.Select(to.C(s.Edge.Columns[0])).
 			From(to)
 		matches.WithContext(q.Context())
 		pred(matches)
 		q.Where(sql.In(q.C(s.From.Column), matches))
+	}
+}
+
+// countAlias returns the alias to use for the count column.
+func countAlias(q *sql.Selector, s *Step, opt *sql.OrderTermOptions) string {
+	if opt.As != "" {
+		return opt.As
+	}
+	selected := make(map[string]struct{})
+	for _, c := range q.SelectedColumns() {
+		selected[c] = struct{}{}
+	}
+	column := fmt.Sprintf("count_%s", s.To.Table)
+	// If the column was already selected,
+	// try to find a free alias.
+	if _, ok := selected[column]; ok {
+		for i := 1; i <= 5; i++ {
+			ci := fmt.Sprintf("%s_%d", column, i)
+			if _, ok := selected[ci]; !ok {
+				return ci
+			}
+		}
+	}
+	return column
+}
+
+// OrderByNeighborsCount appends ordering based on the number of neighbors.
+// For example, order users by their number of posts.
+func OrderByNeighborsCount(q *sql.Selector, s *Step, opts ...sql.OrderTermOption) {
+	var (
+		join  *sql.Selector
+		opt   = sql.NewOrderTermOptions(opts...)
+		build = sql.Dialect(q.Dialect())
+	)
+	switch {
+	case s.FromEdgeOwner():
+		// For M2O and O2O inverse, the FK resides in the same table.
+		// Hence, the order by is on the nullability of the column.
+		x := func(b *sql.Builder) {
+			b.Ident(s.From.Column)
+			if opt.Desc {
+				b.WriteOp(sql.OpNotNull)
+			} else {
+				b.WriteOp(sql.OpIsNull)
+			}
+		}
+		q.OrderExpr(build.Expr(x))
+	case s.ThroughEdgeTable():
+		countAs := countAlias(q, s, opt)
+		terms := []sql.OrderTerm{
+			sql.OrderByCount("*", append([]sql.OrderTermOption{sql.OrderAs(countAs)}, opts...)...),
+		}
+		pk1 := s.Edge.Columns[0]
+		if s.Edge.Inverse {
+			pk1 = s.Edge.Columns[1]
+		}
+		joinT := build.Table(s.Edge.Table).Schema(s.Edge.Schema)
+		join = build.Select(
+			joinT.C(pk1),
+		).From(joinT).GroupBy(joinT.C(pk1))
+		selectTerms(join, terms)
+		q.LeftJoin(join).
+			On(
+				q.C(s.From.Column),
+				join.C(pk1),
+			)
+		orderTerms(q, join, terms)
+	case s.ToEdgeOwner():
+		countAs := countAlias(q, s, opt)
+		terms := []sql.OrderTerm{
+			sql.OrderByCount("*", append([]sql.OrderTermOption{sql.OrderAs(countAs)}, opts...)...),
+		}
+		edgeT := build.Table(s.Edge.Table).Schema(s.Edge.Schema)
+		join = build.Select(
+			edgeT.C(s.Edge.Columns[0]),
+		).From(edgeT).GroupBy(edgeT.C(s.Edge.Columns[0]))
+		selectTerms(join, terms)
+		q.LeftJoin(join).
+			On(
+				q.C(s.From.Column),
+				join.C(s.Edge.Columns[0]),
+			)
+		orderTerms(q, join, terms)
+	}
+}
+
+func orderTerms(q, join *sql.Selector, ts []sql.OrderTerm) {
+	for _, t := range ts {
+		t := t
+		var (
+			// Order by column or expression.
+			orderC string
+			orderX func(*sql.Selector) sql.Querier
+			// Order by options.
+			desc, nullsfirst, nullslast bool
+		)
+		switch t := t.(type) {
+		case *sql.OrderFieldTerm:
+			f := t.Field
+			if t.As != "" {
+				f = t.As
+			}
+			orderC = join.C(f)
+			if t.Selected {
+				q.AppendSelect(orderC)
+			}
+			desc = t.Desc
+			nullsfirst = t.NullsFirst
+			nullslast = t.NullsLast
+		case *sql.OrderExprTerm:
+			if t.As != "" {
+				orderC = join.C(t.As)
+				if t.Selected {
+					q.AppendSelect(orderC)
+				}
+			} else {
+				orderX = t.Expr
+			}
+			desc = t.Desc
+			nullsfirst = t.NullsFirst
+			nullslast = t.NullsLast
+		default:
+			continue
+		}
+		q.OrderExprFunc(func(b *sql.Builder) {
+			// Write the ORDER BY term.
+			switch {
+			case orderC != "":
+				b.WriteString(orderC)
+			case orderX != nil:
+				b.Join(orderX(join))
+			}
+			// Unlike MySQL and SQLite, NULL values sort as if larger than any other value. Therefore,
+			// we need to explicitly order NULLs first on ASC and last on DESC unless specified otherwise.
+			switch normalizePG := b.Dialect() == dialect.Postgres && !nullsfirst && !nullslast; {
+			case normalizePG && desc:
+				b.WriteString(" DESC NULLS LAST")
+			case normalizePG:
+				b.WriteString(" NULLS FIRST")
+			case desc:
+				b.WriteString(" DESC")
+			}
+			if nullsfirst {
+				b.WriteString(" NULLS FIRST")
+			} else if nullslast {
+				b.WriteString(" NULLS LAST")
+			}
+		})
+	}
+}
+
+// selectTerms appends the select terms to the joined query.
+// Afterward, the term aliases are utilized to order the root query.
+func selectTerms(q *sql.Selector, ts []sql.OrderTerm) {
+	for _, t := range ts {
+		switch t := t.(type) {
+		case *sql.OrderFieldTerm:
+			if t.As != "" {
+				q.AppendSelectAs(q.C(t.Field), t.As)
+			} else {
+				q.AppendSelect(q.C(t.Field))
+			}
+		case *sql.OrderExprTerm:
+			q.AppendSelectExprAs(t.Expr(q), t.As)
+		}
+	}
+}
+
+// OrderByNeighborTerms appends ordering based on the number of neighbors.
+// For example, order users by their number of posts.
+func OrderByNeighborTerms(q *sql.Selector, s *Step, opts ...sql.OrderTerm) {
+	var (
+		join  *sql.Selector
+		build = sql.Dialect(q.Dialect())
+	)
+	switch {
+	case s.FromEdgeOwner():
+		toT := build.Table(s.To.Table).Schema(s.To.Schema)
+		join = build.Select(toT.C(s.To.Column)).
+			From(toT)
+		selectTerms(join, opts)
+		q.LeftJoin(join).
+			On(q.C(s.Edge.Columns[0]), join.C(s.To.Column))
+	case s.ThroughEdgeTable():
+		pk1, pk2 := s.Edge.Columns[1], s.Edge.Columns[0]
+		if s.Edge.Inverse {
+			pk1, pk2 = pk2, pk1
+		}
+		toT := build.Table(s.To.Table).Schema(s.To.Schema)
+		joinT := build.Table(s.Edge.Table).Schema(s.Edge.Schema)
+		join = build.Select(pk2).
+			From(toT).
+			Join(joinT).
+			On(toT.C(s.To.Column), joinT.C(pk1)).
+			GroupBy(pk2)
+		selectTerms(join, opts)
+		q.LeftJoin(join).
+			On(q.C(s.From.Column), join.C(pk2))
+	case s.ToEdgeOwner():
+		toT := build.Table(s.Edge.Table).Schema(s.Edge.Schema)
+		join = build.Select(toT.C(s.Edge.Columns[0])).
+			From(toT).
+			GroupBy(toT.C(s.Edge.Columns[0]))
+		selectTerms(join, opts)
+		q.LeftJoin(join).
+			On(q.C(s.From.Column), join.C(s.Edge.Columns[0]))
+	}
+	orderTerms(q, join, opts)
+}
+
+// NeighborsLimit provides a modifier function that limits the
+// number of neighbors (rows) loaded per parent row (node).
+type NeighborsLimit struct {
+	// SrcCTE, LimitCTE and RowNumber hold the identifier names
+	// to src query, new limited one (using window function) and
+	// the column for counting rows.
+	SrcCTE, LimitCTE, RowNumber string
+	// DefaultOrderField sets the default ordering for
+	// sub-queries in case no order terms were provided.
+	DefaultOrderField string
+}
+
+// LimitNeighbors returns a modifier that limits the number of neighbors (rows) loaded per parent
+// row (node). The "partitionBy" is the foreign-key column (edge) to partition the window function
+// by, the "limit" is the maximum number of rows per parent, and the "orderBy" defines the order of
+// how neighbors (connected by the edge) are returned.
+//
+// This function is useful for non-unique edges, such as O2M and M2M, where the same parent can
+// have multiple children.
+func LimitNeighbors(partitionBy string, limit int, orderBy ...sql.Querier) func(*sql.Selector) {
+	l := &NeighborsLimit{
+		SrcCTE:            "src_query",
+		LimitCTE:          "limited_query",
+		RowNumber:         "row_number",
+		DefaultOrderField: "id",
+	}
+	return l.Modifier(partitionBy, limit, orderBy...)
+}
+
+// Modifier returns a modifier function that limits the number of rows of the eager load query.
+func (l *NeighborsLimit) Modifier(partitionBy string, limit int, orderBy ...sql.Querier) func(s *sql.Selector) {
+	return func(s *sql.Selector) {
+		var (
+			d  = sql.Dialect(s.Dialect())
+			rn = sql.RowNumber().PartitionBy(partitionBy)
+		)
+		switch {
+		case len(orderBy) > 0:
+			rn.OrderExpr(orderBy...)
+		case l.DefaultOrderField != "":
+			rn.OrderBy(l.DefaultOrderField)
+		default:
+			s.AddError(errors.New("no order terms provided for window function"))
+			return
+		}
+		s.SetDistinct(false)
+		with := d.With(l.SrcCTE).
+			As(s.Clone()).
+			With(l.LimitCTE).
+			As(
+				d.Select("*").
+					AppendSelectExprAs(rn, l.RowNumber).
+					From(d.Table(l.SrcCTE)),
+			)
+		t := d.Table(l.LimitCTE).As(s.TableName())
+		*s = *d.Select(s.UnqualifiedColumns()...).
+			From(t).
+			Where(sql.LTE(t.C(l.RowNumber), limit)).
+			Prefix(with)
 	}
 }
 
@@ -331,6 +627,22 @@ type (
 		CompositeID []*FieldSpec // composite id (edge schema).
 	}
 )
+
+// NewFieldSpec creates a new FieldSpec with its required fields.
+func NewFieldSpec(column string, typ field.Type) *FieldSpec {
+	return &FieldSpec{Column: column, Type: typ}
+}
+
+// AddColumnOnce adds the given column to the spec if it is not already present.
+func (n *NodeSpec) AddColumnOnce(column string) *NodeSpec {
+	for _, c := range n.Columns {
+		if c == column {
+			return n
+		}
+	}
+	n.Columns = append(n.Columns, column)
+	return n
+}
 
 // FieldValues returns the values of additional fields that were set on the join-table.
 func (e *EdgeTarget) FieldValues() []any {
@@ -380,6 +692,11 @@ type (
 		OnConflict []sql.ConflictOption
 	}
 )
+
+// NewCreateSpec creates a new node creation spec.
+func NewCreateSpec(table string, id *FieldSpec) *CreateSpec {
+	return &CreateSpec{Table: table, ID: id}
+}
 
 // SetField appends a new field setter to the creation spec.
 func (u *CreateSpec) SetField(column string, t field.Type, value driver.Value) {
@@ -432,6 +749,20 @@ type (
 		Assign     func(columns []string, values []any) error
 	}
 )
+
+// NewUpdateSpec creates a new node update spec.
+func NewUpdateSpec(table string, columns []string, id ...*FieldSpec) *UpdateSpec {
+	spec := &UpdateSpec{
+		Node: &NodeSpec{Table: table, Columns: columns},
+	}
+	switch {
+	case len(id) == 1:
+		spec.Node.ID = id[0]
+	case len(id) > 1:
+		spec.Node.CompositeID = id
+	}
+	return spec
+}
 
 // AddModifier adds a new statement modifier to the spec.
 func (u *UpdateSpec) AddModifier(m func(*sql.UpdateBuilder)) {
@@ -508,6 +839,11 @@ type DeleteSpec struct {
 	Predicate func(*sql.Selector)
 }
 
+// NewDeleteSpec creates a new node deletion spec.
+func NewDeleteSpec(table string, id *FieldSpec) *DeleteSpec {
+	return &DeleteSpec{Node: &NodeSpec{Table: table, ID: id}}
+}
+
 // DeleteNodes applies the DeleteSpec on the graph.
 func DeleteNodes(ctx context.Context, drv dialect.Driver, spec *DeleteSpec) (int, error) {
 	var (
@@ -546,6 +882,17 @@ type QuerySpec struct {
 
 	ScanValues func(columns []string) ([]any, error)
 	Assign     func(columns []string, values []any) error
+}
+
+// NewQuerySpec creates a new node query spec.
+func NewQuerySpec(table string, columns []string, id *FieldSpec) *QuerySpec {
+	return &QuerySpec{
+		Node: &NodeSpec{
+			ID:      id,
+			Table:   table,
+			Columns: columns,
+		},
+	}
 }
 
 // QueryNodes queries the nodes in the graph query and scans them to the given values.
@@ -629,6 +976,11 @@ func (q *query) nodes(ctx context.Context, drv dialect.Driver) error {
 		if err != nil {
 			return err
 		}
+		for i, v := range values {
+			if _, ok := v.(*sql.UnknownType); ok {
+				values[i] = sql.ScanTypeOf(rows, i)
+			}
+		}
 		if err := rows.Scan(values...); err != nil {
 			return err
 		}
@@ -682,11 +1034,11 @@ func (q *query) selector(ctx context.Context) (*sql.Selector, error) {
 		selector = q.From
 	}
 	selector.Select(selector.Columns(q.Node.Columns...)...)
-	if pred := q.Predicate; pred != nil {
-		pred(selector)
-	}
 	if order := q.Order; order != nil {
 		order(selector)
+	}
+	if pred := q.Predicate; pred != nil {
+		pred(selector)
 	}
 	if q.Offset != 0 {
 		// Limit is mandatory for the offset clause. We start
@@ -971,6 +1323,11 @@ func (u *updater) scan(rows *sql.Rows) error {
 	if err != nil {
 		return err
 	}
+	for i, v := range values {
+		if _, ok := v.(*sql.UnknownType); ok {
+			values[i] = sql.ScanTypeOf(rows, i)
+		}
+	}
 	if err := rows.Scan(values...); err != nil {
 		return fmt.Errorf("failed scanning rows: %w", err)
 	}
@@ -1021,7 +1378,10 @@ func (c *creator) node(ctx context.Context, drv dialect.Driver) error {
 		// we interact with an edge-schema with composite primary key.
 		if c.ID == nil {
 			c.ensureConflict(insert)
-			query, args := insert.Query()
+			query, args, err := insert.QueryErr()
+			if err != nil {
+				return err
+			}
 			return c.tx.Exec(ctx, query, args, nil)
 		}
 		if err := c.insert(ctx, insert); err != nil {
@@ -1067,7 +1427,10 @@ func (c *creator) insert(ctx context.Context, insert *sql.InsertBuilder) error {
 		// In case of "ON CONFLICT", the record may exist in the
 		// database, and we need to get back the database id field.
 		if len(c.CreateSpec.OnConflict) == 0 {
-			query, args := insert.Query()
+			query, args, err := insert.QueryErr()
+			if err != nil {
+				return err
+			}
 			return c.tx.Exec(ctx, query, args, nil)
 		}
 	}
@@ -1134,7 +1497,7 @@ func (c *batchCreator) nodes(ctx context.Context, drv dialect.Driver) error {
 					// If the ID value was provided to one of the nodes, it should be
 					// provided to all others because this affects the way we calculate
 					// their values in MySQL and SQLite dialects.
-					return fmt.Errorf("incosistent id values for batch insert")
+					return fmt.Errorf("inconsistent id values for batch insert")
 				}
 				// Assign NULL values for empty placeholders.
 				values[i][column] = nil
@@ -1500,8 +1863,8 @@ func setTableColumns(fields []*FieldSpec, edges map[Rel][]*EdgeSpec, set func(st
 
 // insertLastID invokes the insert query on the transaction and returns the LastInsertID.
 func (c *creator) insertLastID(ctx context.Context, insert *sql.InsertBuilder) error {
-	query, args := insert.Query()
-	if err := insert.Err(); err != nil {
+	query, args, err := insert.QueryErr()
+	if err != nil {
 		return err
 	}
 	// MySQL does not support the "RETURNING" clause.
@@ -1548,8 +1911,8 @@ func (c *creator) insertLastID(ctx context.Context, insert *sql.InsertBuilder) e
 
 // insertLastIDs invokes the batch insert query on the transaction and returns the LastInsertID of all entities.
 func (c *batchCreator) insertLastIDs(ctx context.Context, tx dialect.ExecQuerier, insert *sql.InsertBuilder) error {
-	query, args := insert.Query()
-	if err := insert.Err(); err != nil {
+	query, args, err := insert.QueryErr()
+	if err != nil {
 		return err
 	}
 	// MySQL does not support the "RETURNING" clause.
@@ -1573,7 +1936,7 @@ func (c *batchCreator) insertLastIDs(ctx context.Context, tx dialect.ExecQuerier
 				return err
 			}
 		}
-		return nil
+		return rows.Err()
 	}
 	// MySQL.
 	var res sql.Result

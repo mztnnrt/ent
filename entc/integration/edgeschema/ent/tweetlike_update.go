@@ -54,9 +54,25 @@ func (tlu *TweetLikeUpdate) SetUserID(i int) *TweetLikeUpdate {
 	return tlu
 }
 
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (tlu *TweetLikeUpdate) SetNillableUserID(i *int) *TweetLikeUpdate {
+	if i != nil {
+		tlu.SetUserID(*i)
+	}
+	return tlu
+}
+
 // SetTweetID sets the "tweet_id" field.
 func (tlu *TweetLikeUpdate) SetTweetID(i int) *TweetLikeUpdate {
 	tlu.mutation.SetTweetID(i)
+	return tlu
+}
+
+// SetNillableTweetID sets the "tweet_id" field if the given value is not nil.
+func (tlu *TweetLikeUpdate) SetNillableTweetID(i *int) *TweetLikeUpdate {
+	if i != nil {
+		tlu.SetTweetID(*i)
+	}
 	return tlu
 }
 
@@ -89,7 +105,7 @@ func (tlu *TweetLikeUpdate) ClearUser() *TweetLikeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (tlu *TweetLikeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TweetLikeMutation](ctx, tlu.sqlSave, tlu.mutation, tlu.hooks)
+	return withHooks(ctx, tlu.sqlSave, tlu.mutation, tlu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -129,22 +145,7 @@ func (tlu *TweetLikeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tlu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tweetlike.Table,
-			Columns: tweetlike.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeInt,
-					Column: tweetlike.FieldUserID,
-				},
-				{
-					Type:   field.TypeInt,
-					Column: tweetlike.FieldTweetID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tweetlike.Table, tweetlike.Columns, sqlgraph.NewFieldSpec(tweetlike.FieldUserID, field.TypeInt), sqlgraph.NewFieldSpec(tweetlike.FieldTweetID, field.TypeInt))
 	if ps := tlu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -163,10 +164,7 @@ func (tlu *TweetLikeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweetlike.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -179,10 +177,7 @@ func (tlu *TweetLikeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweetlike.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -198,10 +193,7 @@ func (tlu *TweetLikeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweetlike.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -214,10 +206,7 @@ func (tlu *TweetLikeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{tweetlike.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -265,9 +254,25 @@ func (tluo *TweetLikeUpdateOne) SetUserID(i int) *TweetLikeUpdateOne {
 	return tluo
 }
 
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (tluo *TweetLikeUpdateOne) SetNillableUserID(i *int) *TweetLikeUpdateOne {
+	if i != nil {
+		tluo.SetUserID(*i)
+	}
+	return tluo
+}
+
 // SetTweetID sets the "tweet_id" field.
 func (tluo *TweetLikeUpdateOne) SetTweetID(i int) *TweetLikeUpdateOne {
 	tluo.mutation.SetTweetID(i)
+	return tluo
+}
+
+// SetNillableTweetID sets the "tweet_id" field if the given value is not nil.
+func (tluo *TweetLikeUpdateOne) SetNillableTweetID(i *int) *TweetLikeUpdateOne {
+	if i != nil {
+		tluo.SetTweetID(*i)
+	}
 	return tluo
 }
 
@@ -298,6 +303,12 @@ func (tluo *TweetLikeUpdateOne) ClearUser() *TweetLikeUpdateOne {
 	return tluo
 }
 
+// Where appends a list predicates to the TweetLikeUpdate builder.
+func (tluo *TweetLikeUpdateOne) Where(ps ...predicate.TweetLike) *TweetLikeUpdateOne {
+	tluo.mutation.Where(ps...)
+	return tluo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (tluo *TweetLikeUpdateOne) Select(field string, fields ...string) *TweetLikeUpdateOne {
@@ -307,7 +318,7 @@ func (tluo *TweetLikeUpdateOne) Select(field string, fields ...string) *TweetLik
 
 // Save executes the query and returns the updated TweetLike entity.
 func (tluo *TweetLikeUpdateOne) Save(ctx context.Context) (*TweetLike, error) {
-	return withHooks[*TweetLike, TweetLikeMutation](ctx, tluo.sqlSave, tluo.mutation, tluo.hooks)
+	return withHooks(ctx, tluo.sqlSave, tluo.mutation, tluo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -347,22 +358,7 @@ func (tluo *TweetLikeUpdateOne) sqlSave(ctx context.Context) (_node *TweetLike, 
 	if err := tluo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tweetlike.Table,
-			Columns: tweetlike.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeInt,
-					Column: tweetlike.FieldUserID,
-				},
-				{
-					Type:   field.TypeInt,
-					Column: tweetlike.FieldTweetID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tweetlike.Table, tweetlike.Columns, sqlgraph.NewFieldSpec(tweetlike.FieldUserID, field.TypeInt), sqlgraph.NewFieldSpec(tweetlike.FieldTweetID, field.TypeInt))
 	if id, ok := tluo.mutation.UserID(); !ok {
 		return nil, &ValidationError{Name: "user_id", err: errors.New(`ent: missing "TweetLike.user_id" for update`)}
 	} else {
@@ -400,10 +396,7 @@ func (tluo *TweetLikeUpdateOne) sqlSave(ctx context.Context) (_node *TweetLike, 
 			Columns: []string{tweetlike.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -416,10 +409,7 @@ func (tluo *TweetLikeUpdateOne) sqlSave(ctx context.Context) (_node *TweetLike, 
 			Columns: []string{tweetlike.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -435,10 +425,7 @@ func (tluo *TweetLikeUpdateOne) sqlSave(ctx context.Context) (_node *TweetLike, 
 			Columns: []string{tweetlike.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -451,10 +438,7 @@ func (tluo *TweetLikeUpdateOne) sqlSave(ctx context.Context) (_node *TweetLike, 
 			Columns: []string{tweetlike.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

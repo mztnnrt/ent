@@ -31,7 +31,7 @@ func (gid *GroupInfoDelete) Where(ps ...predicate.GroupInfo) *GroupInfoDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (gid *GroupInfoDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, GroupInfoMutation](ctx, gid.sqlExec, gid.mutation, gid.hooks)
+	return withHooks(ctx, gid.sqlExec, gid.mutation, gid.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (gid *GroupInfoDelete) ExecX(ctx context.Context) int {
 }
 
 func (gid *GroupInfoDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: groupinfo.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: groupinfo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(groupinfo.Table, sqlgraph.NewFieldSpec(groupinfo.FieldID, field.TypeInt))
 	if ps := gid.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type GroupInfoDeleteOne struct {
 	gid *GroupInfoDelete
 }
 
+// Where appends a list predicates to the GroupInfoDelete builder.
+func (gido *GroupInfoDeleteOne) Where(ps ...predicate.GroupInfo) *GroupInfoDeleteOne {
+	gido.gid.mutation.Where(ps...)
+	return gido
+}
+
 // Exec executes the deletion query.
 func (gido *GroupInfoDeleteOne) Exec(ctx context.Context) error {
 	n, err := gido.gid.Exec(ctx)
@@ -88,5 +86,7 @@ func (gido *GroupInfoDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gido *GroupInfoDeleteOne) ExecX(ctx context.Context) {
-	gido.gid.ExecX(ctx)
+	if err := gido.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

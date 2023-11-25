@@ -12,13 +12,12 @@ import (
 	"fmt"
 	"sync"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/examples/privacytenant/ent/group"
 	"entgo.io/ent/examples/privacytenant/ent/predicate"
 	"entgo.io/ent/examples/privacytenant/ent/tenant"
 	"entgo.io/ent/examples/privacytenant/ent/user"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -226,6 +225,7 @@ func (m *GroupMutation) ResetName() {
 // ClearTenant clears the "tenant" edge to the Tenant entity.
 func (m *GroupMutation) ClearTenant() {
 	m.clearedtenant = true
+	m.clearedFields[group.FieldTenantID] = struct{}{}
 }
 
 // TenantCleared reports if the "tenant" edge to the Tenant entity was cleared.
@@ -1140,6 +1140,7 @@ func (m *UserMutation) ResetFoods() {
 // ClearTenant clears the "tenant" edge to the Tenant entity.
 func (m *UserMutation) ClearTenant() {
 	m.clearedtenant = true
+	m.clearedFields[user.FieldTenantID] = struct{}{}
 }
 
 // TenantCleared reports if the "tenant" edge to the Tenant entity was cleared.

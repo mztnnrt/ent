@@ -22,11 +22,8 @@ import (
 // InfoQuery is the builder for querying Info entities.
 type InfoQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
+	ctx        *QueryContext
+	order      []info.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Info
 	withUser   *UserQuery
@@ -43,25 +40,25 @@ func (iq *InfoQuery) Where(ps ...predicate.Info) *InfoQuery {
 
 // Limit the number of records to be returned by this query.
 func (iq *InfoQuery) Limit(limit int) *InfoQuery {
-	iq.limit = &limit
+	iq.ctx.Limit = &limit
 	return iq
 }
 
 // Offset to start from.
 func (iq *InfoQuery) Offset(offset int) *InfoQuery {
-	iq.offset = &offset
+	iq.ctx.Offset = &offset
 	return iq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (iq *InfoQuery) Unique(unique bool) *InfoQuery {
-	iq.unique = &unique
+	iq.ctx.Unique = &unique
 	return iq
 }
 
 // Order specifies how the records should be ordered.
-func (iq *InfoQuery) Order(o ...OrderFunc) *InfoQuery {
+func (iq *InfoQuery) Order(o ...info.OrderOption) *InfoQuery {
 	iq.order = append(iq.order, o...)
 	return iq
 }
@@ -91,7 +88,7 @@ func (iq *InfoQuery) QueryUser() *UserQuery {
 // First returns the first Info entity from the query.
 // Returns a *NotFoundError when no Info was found.
 func (iq *InfoQuery) First(ctx context.Context) (*Info, error) {
-	nodes, err := iq.Limit(1).All(newQueryContext(ctx, TypeInfo, "First"))
+	nodes, err := iq.Limit(1).All(setContextOp(ctx, iq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +111,7 @@ func (iq *InfoQuery) FirstX(ctx context.Context) *Info {
 // Returns a *NotFoundError when no Info ID was found.
 func (iq *InfoQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = iq.Limit(1).IDs(newQueryContext(ctx, TypeInfo, "FirstID")); err != nil {
+	if ids, err = iq.Limit(1).IDs(setContextOp(ctx, iq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -137,7 +134,7 @@ func (iq *InfoQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one Info entity is found.
 // Returns a *NotFoundError when no Info entities are found.
 func (iq *InfoQuery) Only(ctx context.Context) (*Info, error) {
-	nodes, err := iq.Limit(2).All(newQueryContext(ctx, TypeInfo, "Only"))
+	nodes, err := iq.Limit(2).All(setContextOp(ctx, iq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +162,7 @@ func (iq *InfoQuery) OnlyX(ctx context.Context) *Info {
 // Returns a *NotFoundError when no entities are found.
 func (iq *InfoQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = iq.Limit(2).IDs(newQueryContext(ctx, TypeInfo, "OnlyID")); err != nil {
+	if ids, err = iq.Limit(2).IDs(setContextOp(ctx, iq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -190,7 +187,7 @@ func (iq *InfoQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of Infos.
 func (iq *InfoQuery) All(ctx context.Context) ([]*Info, error) {
-	ctx = newQueryContext(ctx, TypeInfo, "All")
+	ctx = setContextOp(ctx, iq.ctx, "All")
 	if err := iq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -208,10 +205,12 @@ func (iq *InfoQuery) AllX(ctx context.Context) []*Info {
 }
 
 // IDs executes the query and returns a list of Info IDs.
-func (iq *InfoQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
-	ctx = newQueryContext(ctx, TypeInfo, "IDs")
-	if err := iq.Select(info.FieldID).Scan(ctx, &ids); err != nil {
+func (iq *InfoQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if iq.ctx.Unique == nil && iq.path != nil {
+		iq.Unique(true)
+	}
+	ctx = setContextOp(ctx, iq.ctx, "IDs")
+	if err = iq.Select(info.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -228,7 +227,7 @@ func (iq *InfoQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (iq *InfoQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeInfo, "Count")
+	ctx = setContextOp(ctx, iq.ctx, "Count")
 	if err := iq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -246,7 +245,7 @@ func (iq *InfoQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (iq *InfoQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeInfo, "Exist")
+	ctx = setContextOp(ctx, iq.ctx, "Exist")
 	switch _, err := iq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -274,16 +273,14 @@ func (iq *InfoQuery) Clone() *InfoQuery {
 	}
 	return &InfoQuery{
 		config:     iq.config,
-		limit:      iq.limit,
-		offset:     iq.offset,
-		order:      append([]OrderFunc{}, iq.order...),
+		ctx:        iq.ctx.Clone(),
+		order:      append([]info.OrderOption{}, iq.order...),
 		inters:     append([]Interceptor{}, iq.inters...),
 		predicates: append([]predicate.Info{}, iq.predicates...),
 		withUser:   iq.withUser.Clone(),
 		// clone intermediate query.
-		sql:    iq.sql.Clone(),
-		path:   iq.path,
-		unique: iq.unique,
+		sql:  iq.sql.Clone(),
+		path: iq.path,
 	}
 }
 
@@ -313,9 +310,9 @@ func (iq *InfoQuery) WithUser(opts ...func(*UserQuery)) *InfoQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (iq *InfoQuery) GroupBy(field string, fields ...string) *InfoGroupBy {
-	iq.fields = append([]string{field}, fields...)
+	iq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &InfoGroupBy{build: iq}
-	grbuild.flds = &iq.fields
+	grbuild.flds = &iq.ctx.Fields
 	grbuild.label = info.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -334,10 +331,10 @@ func (iq *InfoQuery) GroupBy(field string, fields ...string) *InfoGroupBy {
 //		Select(info.FieldContent).
 //		Scan(ctx, &v)
 func (iq *InfoQuery) Select(fields ...string) *InfoSelect {
-	iq.fields = append(iq.fields, fields...)
+	iq.ctx.Fields = append(iq.ctx.Fields, fields...)
 	sbuild := &InfoSelect{InfoQuery: iq}
 	sbuild.label = info.Label
-	sbuild.flds, sbuild.scan = &iq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &iq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -357,7 +354,7 @@ func (iq *InfoQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range iq.fields {
+	for _, f := range iq.ctx.Fields {
 		if !info.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -439,30 +436,22 @@ func (iq *InfoQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*In
 
 func (iq *InfoQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := iq.querySpec()
-	_spec.Node.Columns = iq.fields
-	if len(iq.fields) > 0 {
-		_spec.Unique = iq.unique != nil && *iq.unique
+	_spec.Node.Columns = iq.ctx.Fields
+	if len(iq.ctx.Fields) > 0 {
+		_spec.Unique = iq.ctx.Unique != nil && *iq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, iq.driver, _spec)
 }
 
 func (iq *InfoQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   info.Table,
-			Columns: info.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: info.FieldID,
-			},
-		},
-		From:   iq.sql,
-		Unique: true,
-	}
-	if unique := iq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(info.Table, info.Columns, sqlgraph.NewFieldSpec(info.FieldID, field.TypeInt))
+	_spec.From = iq.sql
+	if unique := iq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if iq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := iq.fields; len(fields) > 0 {
+	if fields := iq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, info.FieldID)
 		for i := range fields {
@@ -478,10 +467,10 @@ func (iq *InfoQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := iq.limit; limit != nil {
+	if limit := iq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := iq.offset; offset != nil {
+	if offset := iq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := iq.order; len(ps) > 0 {
@@ -497,7 +486,7 @@ func (iq *InfoQuery) querySpec() *sqlgraph.QuerySpec {
 func (iq *InfoQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(iq.driver.Dialect())
 	t1 := builder.Table(info.Table)
-	columns := iq.fields
+	columns := iq.ctx.Fields
 	if len(columns) == 0 {
 		columns = info.Columns
 	}
@@ -506,7 +495,7 @@ func (iq *InfoQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = iq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if iq.unique != nil && *iq.unique {
+	if iq.ctx.Unique != nil && *iq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range iq.predicates {
@@ -515,12 +504,12 @@ func (iq *InfoQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range iq.order {
 		p(selector)
 	}
-	if offset := iq.offset; offset != nil {
+	if offset := iq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := iq.limit; limit != nil {
+	if limit := iq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -540,7 +529,7 @@ func (igb *InfoGroupBy) Aggregate(fns ...AggregateFunc) *InfoGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (igb *InfoGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeInfo, "GroupBy")
+	ctx = setContextOp(ctx, igb.build.ctx, "GroupBy")
 	if err := igb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -588,7 +577,7 @@ func (is *InfoSelect) Aggregate(fns ...AggregateFunc) *InfoSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (is *InfoSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeInfo, "Select")
+	ctx = setContextOp(ctx, is.ctx, "Select")
 	if err := is.prepareQuery(ctx); err != nil {
 		return err
 	}

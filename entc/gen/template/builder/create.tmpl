@@ -12,16 +12,12 @@ in the LICENSE file in the root directory of this source tree.
 
 {{ template "header" $ }}
 
-{{ template "import" $ }}
-
-import (
-	{{- range $import := $.SiblingImports }}
-		{{ $import.Alias }} "{{ $import.Path }}"
-	{{- end }}
-)
+{{ with extend $ "Imports" $.SiblingImports }}
+	{{ template "import" . }}
+{{ end }}
 
 {{ $builder := $.CreateName }}
-{{ $receiver := receiver $builder }}
+{{ $receiver := $.CreateReceiver }}
 {{ $mutation := print $receiver ".mutation" }}
 
 // {{ $builder }} is the builder for creating a {{ $.Name }} entity.
@@ -36,7 +32,7 @@ type {{ $builder }} struct {
 	{{- end }}
 }
 
-{{ with extend $ "Builder" $builder }}
+{{ with extend $ "Receiver" $receiver "Builder" $builder }}
 	{{ template "setter" . }}
 {{ end }}
 
@@ -51,7 +47,7 @@ func ({{ $receiver }} *{{ $builder }}) Save(ctx context.Context) (*{{ $.Name }},
 			{{ $receiver }}.defaults()
 		{{- end }}
 	{{- end }}
-	return withHooks[*{{ $.Name }}, {{ $.MutationName }}](ctx, {{ $receiver }}.{{ $.Storage }}Save, {{ $mutation }}, {{ $receiver }}.hooks)
+	return withHooks(ctx, {{ $receiver }}.{{ $.Storage }}Save, {{ $mutation }}, {{ $receiver }}.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -89,7 +85,7 @@ func ({{ $receiver }} *{{ $builder }}) ExecX(ctx context.Context) {
 						}
 					{{- end }}
 					v := {{ $.Package }}.{{ $f.DefaultName }}{{ if $f.DefaultFunc }}(){{ end }}
-					{{ $mutation }}.Set{{ $f.StructField }}(v)
+					{{ $mutation }}.{{ $f.MutationSet }}(v)
 				}
 			{{- end }}
 		{{- end }}
@@ -120,10 +116,10 @@ func ({{ $receiver }} *{{ $builder }}) check() error {
 				{{- end }}
 			{{- end }}
 		{{- end }}
-		{{- with or $f.Validators $f.IsEnum }}
+		{{- $isValidator := and ($f.HasGoType) ($f.Type.Validator) }}
+		{{- with or $f.Validators $f.IsEnum $isValidator }}
 			if v, ok := {{ $mutation }}.{{ $f.MutationGet }}(); ok {
-				{{- $basic := $f.BasicType "v" }}
-				if err := {{ $.Package }}.{{ $f.Validator }}({{ $basic }}); err != nil {
+				if err := {{ if or $f.Validators $f.IsEnum }}{{ $.Package }}.{{ $f.Validator }}({{ $f.BasicType "v" }}){{ else }}v.Validate(){{ end }}; err != nil {
 					return &ValidationError{Name: "{{ $f.Name }}", err: fmt.Errorf(`{{ $pkg }}: validator failed for field "{{ $.Name }}.{{ $f.Name }}": %w`, err)}
 				}
 			}
@@ -143,7 +139,7 @@ func ({{ $receiver }} *{{ $builder }}) check() error {
 	return nil
 }
 
-{{ with extend $ "Builder" $builder }}
+{{ with extend $ "Receiver" $receiver "Builder" $builder }}
 	{{ $tmpl := printf "dialect/%s/create" $.Storage }}
 	{{ xtemplate $tmpl . }}
 {{ end }}
@@ -161,6 +157,7 @@ func ({{ $receiver }} *{{ $builder }}) check() error {
 // {{ $bulk }} is the builder for creating many {{ $.Name }} entities in bulk.
 type {{ $bulk }} struct {
 	config
+	err error
 	builders []*{{  $builder }}
 	{{- /* Additional fields to add to the builder. */}}
 	{{- $tmpl = printf "dialect/%s/create_bulk/fields" $.Storage }}

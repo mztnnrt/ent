@@ -63,7 +63,7 @@ func (ic *InfoCreate) Mutation() *InfoMutation {
 
 // Save creates the Info in the database.
 func (ic *InfoCreate) Save(ctx context.Context) (*Info, error) {
-	return withHooks[*Info, InfoMutation](ctx, ic.sqlSave, ic.mutation, ic.hooks)
+	return withHooks(ctx, ic.sqlSave, ic.mutation, ic.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -119,13 +119,7 @@ func (ic *InfoCreate) sqlSave(ctx context.Context) (*Info, error) {
 func (ic *InfoCreate) createSpec() (*Info, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Info{config: ic.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: info.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: info.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(info.Table, sqlgraph.NewFieldSpec(info.FieldID, field.TypeInt))
 	)
 	if id, ok := ic.mutation.ID(); ok {
 		_node.ID = id
@@ -143,10 +137,7 @@ func (ic *InfoCreate) createSpec() (*Info, *sqlgraph.CreateSpec) {
 			Columns: []string{info.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -161,11 +152,15 @@ func (ic *InfoCreate) createSpec() (*Info, *sqlgraph.CreateSpec) {
 // InfoCreateBulk is the builder for creating many Info entities in bulk.
 type InfoCreateBulk struct {
 	config
+	err      error
 	builders []*InfoCreate
 }
 
 // Save creates the Info entities in the database.
 func (icb *InfoCreateBulk) Save(ctx context.Context) ([]*Info, error) {
+	if icb.err != nil {
+		return nil, icb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(icb.builders))
 	nodes := make([]*Info, len(icb.builders))
 	mutators := make([]Mutator, len(icb.builders))
@@ -181,8 +176,8 @@ func (icb *InfoCreateBulk) Save(ctx context.Context) ([]*Info, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, icb.builders[i+1].mutation)
 				} else {

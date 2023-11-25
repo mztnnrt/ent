@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/entc/integration/customid/ent/account"
 	"entgo.io/ent/entc/integration/customid/ent/blob"
@@ -34,8 +35,6 @@ import (
 	"entgo.io/ent/entc/integration/customid/sid"
 	uuidc "entgo.io/ent/entc/integration/customid/uuidcompatible"
 	"github.com/google/uuid"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -1179,6 +1178,7 @@ func (m *BlobLinkMutation) ResetLinkID() {
 // ClearBlob clears the "blob" edge to the Blob entity.
 func (m *BlobLinkMutation) ClearBlob() {
 	m.clearedblob = true
+	m.clearedFields[bloblink.FieldBlobID] = struct{}{}
 }
 
 // BlobCleared reports if the "blob" edge to the Blob entity was cleared.
@@ -1205,6 +1205,7 @@ func (m *BlobLinkMutation) ResetBlob() {
 // ClearLink clears the "link" edge to the Blob entity.
 func (m *BlobLinkMutation) ClearLink() {
 	m.clearedlink = true
+	m.clearedFields[bloblink.FieldLinkID] = struct{}{}
 }
 
 // LinkCleared reports if the "link" edge to the Blob entity was cleared.

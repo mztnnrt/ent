@@ -132,7 +132,7 @@ func (cc *CardCreate) Mutation() *CardMutation {
 // Save creates the Card in the database.
 func (cc *CardCreate) Save(ctx context.Context) (*Card, error) {
 	cc.defaults()
-	return withHooks[*Card, CardMutation](ctx, cc.sqlSave, cc.mutation, cc.hooks)
+	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -221,13 +221,7 @@ func (cc *CardCreate) sqlSave(ctx context.Context) (*Card, error) {
 func (cc *CardCreate) createSpec() (*Card, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Card{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: card.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: card.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(card.Table, sqlgraph.NewFieldSpec(card.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = cc.conflict
 	if value, ok := cc.mutation.CreateTime(); ok {
@@ -258,10 +252,7 @@ func (cc *CardCreate) createSpec() (*Card, *sqlgraph.CreateSpec) {
 			Columns: []string{card.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -278,10 +269,7 @@ func (cc *CardCreate) createSpec() (*Card, *sqlgraph.CreateSpec) {
 			Columns: card.SpecPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: spec.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(spec.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -529,12 +517,16 @@ func (u *CardUpsertOne) IDX(ctx context.Context) int {
 // CardCreateBulk is the builder for creating many Card entities in bulk.
 type CardCreateBulk struct {
 	config
+	err      error
 	builders []*CardCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Card entities in the database.
 func (ccb *CardCreateBulk) Save(ctx context.Context) ([]*Card, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Card, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))
@@ -551,8 +543,8 @@ func (ccb *CardCreateBulk) Save(ctx context.Context) ([]*Card, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ccb.builders[i+1].mutation)
 				} else {
@@ -761,6 +753,9 @@ func (u *CardUpsertBulk) ClearName() *CardUpsertBulk {
 
 // Exec executes the query.
 func (u *CardUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the CardCreateBulk instead", i)

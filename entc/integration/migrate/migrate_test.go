@@ -74,6 +74,7 @@ func TestMySQL(t *testing.T) {
 			NicknameSearch(t, clientv2)
 			TimePrecision(t, drv, "SELECT datetime_precision FROM information_schema.columns WHERE table_schema = 'migrate' AND table_name = ? AND column_name = ?")
 			ColumnComments(t, drv, "SELECT column_name as name, column_comment as comment FROM information_schema.columns WHERE table_schema = 'migrate' AND table_name = 'media' ORDER BY ordinal_position")
+			TableComment(t, drv, "SELECT table_comment FROM information_schema.tables WHERE table_schema = 'migrate' AND table_name = 'media'")
 
 			require.NoError(t, err, root.Exec(ctx, "DROP DATABASE IF EXISTS versioned_migrate", []any{}, new(sql.Result)))
 			require.NoError(t, root.Exec(ctx, "CREATE DATABASE IF NOT EXISTS versioned_migrate", []any{}, new(sql.Result)))
@@ -136,12 +137,13 @@ func TestPostgres(t *testing.T) {
 			)
 			CheckConstraint(t, clientv2)
 			TimePrecision(t, drv, "SELECT datetime_precision FROM information_schema.columns WHERE table_name = $1 AND column_name = $2")
-			PartialIndexes(t, drv, "select indexdef from pg_indexes where indexname=$1", "CREATE INDEX user_phone ON public.users USING btree (phone) WHERE active")
+			PartialIndexes(t, drv, "select indexdef from pg_indexes where indexname=$1", "CREATE INDEX user_phone ON public.users USING btree (phone) WHERE (active AND ((phone)::text <> ''::text))")
 			JSONDefault(t, drv, `SELECT column_default FROM information_schema.columns WHERE table_name = 'users' AND column_name = $1`)
 			DefaultExpr(t, drv, `SELECT column_default FROM information_schema.columns WHERE table_name = 'users' AND column_name = $1`, "lower('hello'::text)", "md5('ent'::text)")
 			PKDefault(t, drv, `SELECT column_default FROM information_schema.columns WHERE table_name = 'zoos' AND column_name = $1`, "floor((random() * ((~ (1 << 31)))::double precision))")
 			IndexOpClass(t, drv)
 			ColumnComments(t, drv, `SELECT column_name as name, col_description(table_name::regclass::oid, ordinal_position) as comment FROM information_schema.columns WHERE table_name = 'media' ORDER BY ordinal_position`)
+			TableComment(t, drv, "SELECT obj_description('media'::regclass::oid)")
 			if version != "10" {
 				IncludeColumns(t, drv)
 			}
@@ -222,7 +224,7 @@ func TestSQLite(t *testing.T) {
 	idRange(t, client.Media.Create().SaveX(ctx).ID, 5<<32-1, 6<<32)
 	idRange(t, client.Pet.Create().SaveX(ctx).ID, 6<<32-1, 7<<32)
 	idRange(t, u.ID, 7<<32-1, 8<<32)
-	PartialIndexes(t, drv, "select sql from sqlite_master where name=?", "CREATE INDEX `user_phone` ON `users` (`phone`) WHERE active")
+	PartialIndexes(t, drv, "select sql from sqlite_master where name=?", "CREATE INDEX `user_phone` ON `users` (`phone`) WHERE active AND \"phone\" <> ''")
 	JSONDefault(t, drv, "SELECT `dflt_value` FROM `pragma_table_info`('users') WHERE `name` = ?")
 	DefaultExpr(t, drv, "SELECT `dflt_value` FROM `pragma_table_info`('users') WHERE `name` = ?", "lower('hello')", "hex('ent')")
 	PKDefault(t, drv, "SELECT `dflt_value` FROM `pragma_table_info`('zoos') WHERE `name` = ?", "abs(random())")
@@ -425,7 +427,7 @@ func Versioned(t *testing.T, drv sql.ExecQuerier, devURL string, client *version
 	hf, err := dir.Checksum()
 	require.NoError(t, err)
 	require.NoError(t, migrate.WriteSumFile(dir, hf))
-	require.ErrorAs(t, client.Schema.Diff(ctx, opts...), &migrate.NotCleanError{})
+	require.ErrorAs(t, client.Schema.Diff(ctx, opts...), new(*migrate.NotCleanError))
 
 	// Diffing by replaying should not create new files.
 	require.Equal(t, 2, countFiles(t, dir))
@@ -710,6 +712,16 @@ func JSONDefault(t *testing.T, drv *sql.Driver, query string) {
 	require.NoError(t, err)
 	require.NoError(t, rows.Close())
 	require.NotEmpty(t, s)
+}
+
+func TableComment(t *testing.T, drv *sql.Driver, query string) {
+	ctx := context.Background()
+	rows, err := drv.QueryContext(ctx, query)
+	require.NoError(t, err)
+	comment, err := sql.ScanString(rows)
+	require.NoError(t, err)
+	require.NoError(t, rows.Close())
+	require.Equal(t, "Comment that appears in both the schema and the generated code", comment)
 }
 
 func ColumnComments(t *testing.T, drv *sql.Driver, query string) {

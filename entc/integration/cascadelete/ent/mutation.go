@@ -12,13 +12,12 @@ import (
 	"fmt"
 	"sync"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/entc/integration/cascadelete/ent/comment"
 	"entgo.io/ent/entc/integration/cascadelete/ent/post"
 	"entgo.io/ent/entc/integration/cascadelete/ent/predicate"
 	"entgo.io/ent/entc/integration/cascadelete/ent/user"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -223,6 +222,7 @@ func (m *CommentMutation) ResetPostID() {
 // ClearPost clears the "post" edge to the Post entity.
 func (m *CommentMutation) ClearPost() {
 	m.clearedpost = true
+	m.clearedFields[comment.FieldPostID] = struct{}{}
 }
 
 // PostCleared reports if the "post" edge to the Post entity was cleared.
@@ -675,6 +675,7 @@ func (m *PostMutation) ResetAuthorID() {
 // ClearAuthor clears the "author" edge to the User entity.
 func (m *PostMutation) ClearAuthor() {
 	m.clearedauthor = true
+	m.clearedFields[post.FieldAuthorID] = struct{}{}
 }
 
 // AuthorCleared reports if the "author" edge to the User entity was cleared.

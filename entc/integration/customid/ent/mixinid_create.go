@@ -61,7 +61,7 @@ func (mic *MixinIDCreate) Mutation() *MixinIDMutation {
 // Save creates the MixinID in the database.
 func (mic *MixinIDCreate) Save(ctx context.Context) (*MixinID, error) {
 	mic.defaults()
-	return withHooks[*MixinID, MixinIDMutation](ctx, mic.sqlSave, mic.mutation, mic.hooks)
+	return withHooks(ctx, mic.sqlSave, mic.mutation, mic.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -131,13 +131,7 @@ func (mic *MixinIDCreate) sqlSave(ctx context.Context) (*MixinID, error) {
 func (mic *MixinIDCreate) createSpec() (*MixinID, *sqlgraph.CreateSpec) {
 	var (
 		_node = &MixinID{config: mic.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: mixinid.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mixinid.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(mixinid.Table, sqlgraph.NewFieldSpec(mixinid.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = mic.conflict
 	if id, ok := mic.mutation.ID(); ok {
@@ -345,12 +339,16 @@ func (u *MixinIDUpsertOne) IDX(ctx context.Context) uuid.UUID {
 // MixinIDCreateBulk is the builder for creating many MixinID entities in bulk.
 type MixinIDCreateBulk struct {
 	config
+	err      error
 	builders []*MixinIDCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the MixinID entities in the database.
 func (micb *MixinIDCreateBulk) Save(ctx context.Context) ([]*MixinID, error) {
+	if micb.err != nil {
+		return nil, micb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(micb.builders))
 	nodes := make([]*MixinID, len(micb.builders))
 	mutators := make([]Mutator, len(micb.builders))
@@ -367,8 +365,8 @@ func (micb *MixinIDCreateBulk) Save(ctx context.Context) ([]*MixinID, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, micb.builders[i+1].mutation)
 				} else {
@@ -545,6 +543,9 @@ func (u *MixinIDUpsertBulk) UpdateMixinField() *MixinIDUpsertBulk {
 
 // Exec executes the query.
 func (u *MixinIDUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the MixinIDCreateBulk instead", i)

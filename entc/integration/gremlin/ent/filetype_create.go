@@ -83,7 +83,7 @@ func (ftc *FileTypeCreate) Mutation() *FileTypeMutation {
 // Save creates the FileType in the database.
 func (ftc *FileTypeCreate) Save(ctx context.Context) (*FileType, error) {
 	ftc.defaults()
-	return withHooks[*FileType, FileTypeMutation](ctx, ftc.gremlinSave, ftc.mutation, ftc.hooks)
+	return withHooks(ctx, ftc.gremlinSave, ftc.mutation, ftc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -156,13 +156,13 @@ func (ftc *FileTypeCreate) gremlinSave(ctx context.Context) (*FileType, error) {
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	ft := &FileType{config: ftc.config}
-	if err := ft.FromResponse(res); err != nil {
+	rnode := &FileType{config: ftc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	ftc.mutation.id = &ft.ID
+	ftc.mutation.id = &rnode.ID
 	ftc.mutation.done = true
-	return ft, nil
+	return rnode, nil
 }
 
 func (ftc *FileTypeCreate) gremlin() *dsl.Traversal {
@@ -205,5 +205,6 @@ func (ftc *FileTypeCreate) gremlin() *dsl.Traversal {
 // FileTypeCreateBulk is the builder for creating many FileType entities in bulk.
 type FileTypeCreateBulk struct {
 	config
+	err      error
 	builders []*FileTypeCreate
 }

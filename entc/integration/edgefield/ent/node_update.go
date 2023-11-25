@@ -115,7 +115,7 @@ func (nu *NodeUpdate) ClearNext() *NodeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (nu *NodeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, NodeMutation](ctx, nu.sqlSave, nu.mutation, nu.hooks)
+	return withHooks(ctx, nu.sqlSave, nu.mutation, nu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -141,16 +141,7 @@ func (nu *NodeUpdate) ExecX(ctx context.Context) {
 }
 
 func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	if ps := nu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -172,10 +163,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -188,10 +176,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -207,10 +192,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -223,10 +205,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -336,6 +315,12 @@ func (nuo *NodeUpdateOne) ClearNext() *NodeUpdateOne {
 	return nuo
 }
 
+// Where appends a list predicates to the NodeUpdate builder.
+func (nuo *NodeUpdateOne) Where(ps ...predicate.Node) *NodeUpdateOne {
+	nuo.mutation.Where(ps...)
+	return nuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne {
@@ -345,7 +330,7 @@ func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne 
 
 // Save executes the query and returns the updated Node entity.
 func (nuo *NodeUpdateOne) Save(ctx context.Context) (*Node, error) {
-	return withHooks[*Node, NodeMutation](ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
+	return withHooks(ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -371,16 +356,7 @@ func (nuo *NodeUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	id, ok := nuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Node.id" for update`)}
@@ -419,10 +395,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -435,10 +408,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.PrevColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -454,10 +424,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -470,10 +437,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.NextColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

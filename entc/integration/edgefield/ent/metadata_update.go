@@ -152,7 +152,7 @@ func (mu *MetadataUpdate) ClearParent() *MetadataUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (mu *MetadataUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, MetadataMutation](ctx, mu.sqlSave, mu.mutation, mu.hooks)
+	return withHooks(ctx, mu.sqlSave, mu.mutation, mu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -178,16 +178,7 @@ func (mu *MetadataUpdate) ExecX(ctx context.Context) {
 }
 
 func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   metadata.Table,
-			Columns: metadata.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: metadata.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(metadata.Table, metadata.Columns, sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt))
 	if ps := mu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -209,10 +200,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -225,10 +213,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -244,10 +229,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -260,10 +242,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -279,10 +258,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -298,10 +274,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -314,10 +287,7 @@ func (mu *MetadataUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{metadata.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -463,6 +433,12 @@ func (muo *MetadataUpdateOne) ClearParent() *MetadataUpdateOne {
 	return muo
 }
 
+// Where appends a list predicates to the MetadataUpdate builder.
+func (muo *MetadataUpdateOne) Where(ps ...predicate.Metadata) *MetadataUpdateOne {
+	muo.mutation.Where(ps...)
+	return muo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (muo *MetadataUpdateOne) Select(field string, fields ...string) *MetadataUpdateOne {
@@ -472,7 +448,7 @@ func (muo *MetadataUpdateOne) Select(field string, fields ...string) *MetadataUp
 
 // Save executes the query and returns the updated Metadata entity.
 func (muo *MetadataUpdateOne) Save(ctx context.Context) (*Metadata, error) {
-	return withHooks[*Metadata, MetadataMutation](ctx, muo.sqlSave, muo.mutation, muo.hooks)
+	return withHooks(ctx, muo.sqlSave, muo.mutation, muo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -498,16 +474,7 @@ func (muo *MetadataUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   metadata.Table,
-			Columns: metadata.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: metadata.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(metadata.Table, metadata.Columns, sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt))
 	id, ok := muo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Metadata.id" for update`)}
@@ -546,10 +513,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -562,10 +526,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -581,10 +542,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -597,10 +555,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -616,10 +571,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -635,10 +587,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -651,10 +600,7 @@ func (muo *MetadataUpdateOne) sqlSave(ctx context.Context) (_node *Metadata, err
 			Columns: []string{metadata.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: metadata.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(metadata.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

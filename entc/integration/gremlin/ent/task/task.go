@@ -9,6 +9,7 @@ package enttask
 import (
 	"time"
 
+	"entgo.io/ent/dialect/gremlin/graph/dsl"
 	"entgo.io/ent/entc/integration/ent/schema/task"
 )
 
@@ -23,15 +24,30 @@ const (
 	FieldPriorities = "priorities"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// FieldName holds the string denoting the name field in the database.
+	FieldName = "name"
+	// FieldOwner holds the string denoting the owner field in the database.
+	FieldOwner = "owner"
+	// FieldOrder holds the string denoting the order field in the database.
+	FieldOrder = "order"
+	// FieldOrderOption holds the string denoting the order_option field in the database.
+	FieldOrderOption = "order_option"
+	// FieldOp holds the string denoting the op field in the database.
+	FieldOp = "op"
 )
 
 var (
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority task.Priority
-	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
-	PriorityValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
+	// DefaultOp holds the default value on creation for the "op" field.
+	DefaultOp string
+	// OpValidator is a validator for the "op" field. It is called by the builders before save.
+	OpValidator func(string) error
 )
+
+// OrderOption defines the ordering options for the Task queries.
+type OrderOption func(*dsl.Traversal)
 
 // comment from another template.

@@ -40,6 +40,14 @@ func (tu *TaskUpdate) SetTitle(s string) *TaskUpdate {
 	return tu
 }
 
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableTitle(s *string) *TaskUpdate {
+	if s != nil {
+		tu.SetTitle(*s)
+	}
+	return tu
+}
+
 // SetDescription sets the "description" field.
 func (tu *TaskUpdate) SetDescription(s string) *TaskUpdate {
 	tu.mutation.SetDescription(s)
@@ -162,7 +170,7 @@ func (tu *TaskUpdate) ClearOwner() *TaskUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (tu *TaskUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TaskMutation](ctx, tu.sqlSave, tu.mutation, tu.hooks)
+	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -206,16 +214,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   task.Table,
-			Columns: task.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: task.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(task.Table, task.Columns, sqlgraph.NewFieldSpec(task.FieldID, field.TypeInt))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -249,10 +248,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -265,10 +261,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -284,10 +277,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -303,10 +293,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{task.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -319,10 +306,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{task.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -353,6 +337,14 @@ type TaskUpdateOne struct {
 // SetTitle sets the "title" field.
 func (tuo *TaskUpdateOne) SetTitle(s string) *TaskUpdateOne {
 	tuo.mutation.SetTitle(s)
+	return tuo
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableTitle(s *string) *TaskUpdateOne {
+	if s != nil {
+		tuo.SetTitle(*s)
+	}
 	return tuo
 }
 
@@ -476,6 +468,12 @@ func (tuo *TaskUpdateOne) ClearOwner() *TaskUpdateOne {
 	return tuo
 }
 
+// Where appends a list predicates to the TaskUpdate builder.
+func (tuo *TaskUpdateOne) Where(ps ...predicate.Task) *TaskUpdateOne {
+	tuo.mutation.Where(ps...)
+	return tuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (tuo *TaskUpdateOne) Select(field string, fields ...string) *TaskUpdateOne {
@@ -485,7 +483,7 @@ func (tuo *TaskUpdateOne) Select(field string, fields ...string) *TaskUpdateOne 
 
 // Save executes the query and returns the updated Task entity.
 func (tuo *TaskUpdateOne) Save(ctx context.Context) (*Task, error) {
-	return withHooks[*Task, TaskMutation](ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -529,16 +527,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 	if err := tuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   task.Table,
-			Columns: task.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: task.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(task.Table, task.Columns, sqlgraph.NewFieldSpec(task.FieldID, field.TypeInt))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Task.id" for update`)}
@@ -589,10 +578,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -605,10 +591,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -624,10 +607,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 			Columns: task.TeamsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: team.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -643,10 +623,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 			Columns: []string{task.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -659,10 +636,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 			Columns: []string{task.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

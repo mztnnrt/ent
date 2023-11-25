@@ -43,8 +43,9 @@ module.exports = {
       type: 'category',
       label: 'Migration',
       items: [
-        'migrate',
         'versioned-migrations',
+        'multischema-migrations',
+        'migrate',
         'data-migrations',
         'dialects',
       ],
@@ -109,6 +110,7 @@ module.exports = {
           'grpc-edges',
           'grpc-optional-fields',
           'grpc-service-generation-options',
+          'grpc-external-service',
       ]
     },
     {
@@ -119,10 +121,6 @@ module.exports = {
         {
           type: 'doc',
           id: 'versioned/intro',
-        },
-        {
-          type: 'doc',
-          id: 'versioned/enable-ff',
         },
         {
           type: 'doc',
@@ -143,7 +141,11 @@ module.exports = {
         {
           type: 'doc',
           id: 'versioned/verifying-safety',
-        }
+        },
+        {
+          type: 'doc',
+          id: 'versioned/programmatically',
+        },
       ]
     }
   ]

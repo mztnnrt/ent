@@ -69,7 +69,7 @@ func (sc *SessionCreate) Mutation() *SessionMutation {
 // Save creates the Session in the database.
 func (sc *SessionCreate) Save(ctx context.Context) (*Session, error) {
 	sc.defaults()
-	return withHooks[*Session, SessionMutation](ctx, sc.sqlSave, sc.mutation, sc.hooks)
+	return withHooks(ctx, sc.sqlSave, sc.mutation, sc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -138,13 +138,7 @@ func (sc *SessionCreate) sqlSave(ctx context.Context) (*Session, error) {
 func (sc *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Session{config: sc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: session.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeBytes,
-				Column: session.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(session.Table, sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes))
 	)
 	_spec.OnConflict = sc.conflict
 	if id, ok := sc.mutation.ID(); ok {
@@ -159,10 +153,7 @@ func (sc *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 			Columns: []string{session.DeviceColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeBytes,
-					Column: device.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(device.FieldID, field.TypeBytes),
 			},
 		}
 		for _, k := range nodes {
@@ -306,12 +297,16 @@ func (u *SessionUpsertOne) IDX(ctx context.Context) schema.ID {
 // SessionCreateBulk is the builder for creating many Session entities in bulk.
 type SessionCreateBulk struct {
 	config
+	err      error
 	builders []*SessionCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the Session entities in the database.
 func (scb *SessionCreateBulk) Save(ctx context.Context) ([]*Session, error) {
+	if scb.err != nil {
+		return nil, scb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(scb.builders))
 	nodes := make([]*Session, len(scb.builders))
 	mutators := make([]Mutator, len(scb.builders))
@@ -328,8 +323,8 @@ func (scb *SessionCreateBulk) Save(ctx context.Context) ([]*Session, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, scb.builders[i+1].mutation)
 				} else {
@@ -473,6 +468,9 @@ func (u *SessionUpsertBulk) Update(set func(*SessionUpsert)) *SessionUpsertBulk 
 
 // Exec executes the query.
 func (u *SessionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the SessionCreateBulk instead", i)

@@ -30,7 +30,7 @@ func (tld *TweetLikeDelete) Where(ps ...predicate.TweetLike) *TweetLikeDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (tld *TweetLikeDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, TweetLikeMutation](ctx, tld.sqlExec, tld.mutation, tld.hooks)
+	return withHooks(ctx, tld.sqlExec, tld.mutation, tld.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -43,11 +43,7 @@ func (tld *TweetLikeDelete) ExecX(ctx context.Context) int {
 }
 
 func (tld *TweetLikeDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: tweetlike.Table,
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(tweetlike.Table, nil)
 	if ps := tld.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -68,6 +64,12 @@ type TweetLikeDeleteOne struct {
 	tld *TweetLikeDelete
 }
 
+// Where appends a list predicates to the TweetLikeDelete builder.
+func (tldo *TweetLikeDeleteOne) Where(ps ...predicate.TweetLike) *TweetLikeDeleteOne {
+	tldo.tld.mutation.Where(ps...)
+	return tldo
+}
+
 // Exec executes the deletion query.
 func (tldo *TweetLikeDeleteOne) Exec(ctx context.Context) error {
 	n, err := tldo.tld.Exec(ctx)
@@ -83,5 +85,7 @@ func (tldo *TweetLikeDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (tldo *TweetLikeDeleteOne) ExecX(ctx context.Context) {
-	tldo.tld.ExecX(ctx)
+	if err := tldo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -39,6 +39,14 @@ func (ftu *FileTypeUpdate) SetName(s string) *FileTypeUpdate {
 	return ftu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ftu *FileTypeUpdate) SetNillableName(s *string) *FileTypeUpdate {
+	if s != nil {
+		ftu.SetName(*s)
+	}
+	return ftu
+}
+
 // SetType sets the "type" field.
 func (ftu *FileTypeUpdate) SetType(f filetype.Type) *FileTypeUpdate {
 	ftu.mutation.SetType(f)
@@ -110,7 +118,7 @@ func (ftu *FileTypeUpdate) RemoveFiles(f ...*File) *FileTypeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ftu *FileTypeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, FileTypeMutation](ctx, ftu.gremlinSave, ftu.mutation, ftu.hooks)
+	return withHooks(ctx, ftu.gremlinSave, ftu.mutation, ftu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -235,6 +243,14 @@ func (ftuo *FileTypeUpdateOne) SetName(s string) *FileTypeUpdateOne {
 	return ftuo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ftuo *FileTypeUpdateOne) SetNillableName(s *string) *FileTypeUpdateOne {
+	if s != nil {
+		ftuo.SetName(*s)
+	}
+	return ftuo
+}
+
 // SetType sets the "type" field.
 func (ftuo *FileTypeUpdateOne) SetType(f filetype.Type) *FileTypeUpdateOne {
 	ftuo.mutation.SetType(f)
@@ -304,6 +320,12 @@ func (ftuo *FileTypeUpdateOne) RemoveFiles(f ...*File) *FileTypeUpdateOne {
 	return ftuo.RemoveFileIDs(ids...)
 }
 
+// Where appends a list predicates to the FileTypeUpdate builder.
+func (ftuo *FileTypeUpdateOne) Where(ps ...predicate.FileType) *FileTypeUpdateOne {
+	ftuo.mutation.Where(ps...)
+	return ftuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ftuo *FileTypeUpdateOne) Select(field string, fields ...string) *FileTypeUpdateOne {
@@ -313,7 +335,7 @@ func (ftuo *FileTypeUpdateOne) Select(field string, fields ...string) *FileTypeU
 
 // Save executes the query and returns the updated FileType entity.
 func (ftuo *FileTypeUpdateOne) Save(ctx context.Context) (*FileType, error) {
-	return withHooks[*FileType, FileTypeMutation](ctx, ftuo.gremlinSave, ftuo.mutation, ftuo.hooks)
+	return withHooks(ctx, ftuo.gremlinSave, ftuo.mutation, ftuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

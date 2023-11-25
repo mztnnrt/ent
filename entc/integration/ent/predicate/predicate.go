@@ -10,11 +10,31 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Api is the predicate function for api builders.
+type Api func(*sql.Selector)
+
+// Builder is the predicate function for builder builders.
+type Builder func(*sql.Selector)
+
 // Card is the predicate function for card builders.
 type Card func(*sql.Selector)
 
 // Comment is the predicate function for comment builders.
 type Comment func(*sql.Selector)
+
+// ExValueScan is the predicate function for exvaluescan builders.
+type ExValueScan func(*sql.Selector)
+
+// ExValueScanOrErr calls the predicate only if the error is not nit.
+func ExValueScanOrErr(p ExValueScan, err error) ExValueScan {
+	return func(s *sql.Selector) {
+		if err != nil {
+			s.AddError(err)
+			return
+		}
+		p(s)
+	}
+}
 
 // FieldType is the predicate function for fieldtype builders.
 type FieldType func(*sql.Selector)
@@ -42,6 +62,9 @@ type License func(*sql.Selector)
 
 // Node is the predicate function for node builders.
 type Node func(*sql.Selector)
+
+// PC is the predicate function for pc builders.
+type PC func(*sql.Selector)
 
 // Pet is the predicate function for pet builders.
 type Pet func(*sql.Selector)

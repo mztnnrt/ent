@@ -152,7 +152,7 @@ func (cu *CardUpdate) RemoveSpec(s ...*Spec) *CardUpdate {
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CardUpdate) Save(ctx context.Context) (int, error) {
 	cu.defaults()
-	return withHooks[int, CardMutation](ctx, cu.gremlinSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.gremlinSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -400,6 +400,12 @@ func (cuo *CardUpdateOne) RemoveSpec(s ...*Spec) *CardUpdateOne {
 	return cuo.RemoveSpecIDs(ids...)
 }
 
+// Where appends a list predicates to the CardUpdate builder.
+func (cuo *CardUpdateOne) Where(ps ...predicate.Card) *CardUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *CardUpdateOne) Select(field string, fields ...string) *CardUpdateOne {
@@ -410,7 +416,7 @@ func (cuo *CardUpdateOne) Select(field string, fields ...string) *CardUpdateOne 
 // Save executes the query and returns the updated Card entity.
 func (cuo *CardUpdateOne) Save(ctx context.Context) (*Card, error) {
 	cuo.defaults()
-	return withHooks[*Card, CardMutation](ctx, cuo.gremlinSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.gremlinSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

@@ -31,7 +31,7 @@ func (cd *CommentDelete) Where(ps ...predicate.Comment) *CommentDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (cd *CommentDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, CommentMutation](ctx, cd.sqlExec, cd.mutation, cd.hooks)
+	return withHooks(ctx, cd.sqlExec, cd.mutation, cd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (cd *CommentDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *CommentDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: comment.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: comment.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(comment.Table, sqlgraph.NewFieldSpec(comment.FieldID, field.TypeInt))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type CommentDeleteOne struct {
 	cd *CommentDelete
 }
 
+// Where appends a list predicates to the CommentDelete builder.
+func (cdo *CommentDeleteOne) Where(ps ...predicate.Comment) *CommentDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *CommentDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -88,5 +86,7 @@ func (cdo *CommentDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CommentDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

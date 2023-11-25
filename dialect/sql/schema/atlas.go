@@ -33,17 +33,20 @@ type Atlas struct {
 	withFixture bool // deprecated: with fks rename fixture
 	sum         bool // deprecated: sum file generation will be required
 
-	universalID     bool // global unique ids
-	dropColumns     bool // drop deleted columns
-	dropIndexes     bool // drop deleted indexes
-	withForeignKeys bool // with foreign keys
+	indent          string // plan indentation
+	errNoPlan       bool   // no plan error enabled
+	universalID     bool   // global unique ids
+	dropColumns     bool   // drop deleted columns
+	dropIndexes     bool   // drop deleted indexes
+	withForeignKeys bool   // with foreign keys
 	mode            Mode
-	hooks           []Hook            // hooks to apply before creation
-	diffHooks       []DiffHook        // diff hooks to run when diffing current and desired
-	applyHook       []ApplyHook       // apply hooks to run when applying the plan
-	skip            ChangeKind        // what changes to skip and not apply
-	dir             migrate.Dir       // the migration directory to read from
-	fmt             migrate.Formatter // how to format the plan into migration files
+	hooks           []Hook              // hooks to apply before creation
+	diffHooks       []DiffHook          // diff hooks to run when diffing current and desired
+	diffOptions     []schema.DiffOption // diff options to pass to the diff engine
+	applyHook       []ApplyHook         // apply hooks to run when applying the plan
+	skip            ChangeKind          // what changes to skip and not apply
+	dir             migrate.Dir         // the migration directory to read from
+	fmt             migrate.Formatter   // how to format the plan into migration files
 
 	driver  dialect.Driver // driver passed in when not using an atlas URL
 	url     *url.URL       // url of database connection
@@ -141,7 +144,7 @@ func (a *Atlas) NamedDiff(ctx context.Context, name string, tables ...*Table) er
 	// Set up connections.
 	if a.driver != nil {
 		var err error
-		a.sqlDialect, err = a.entDialect(a.driver)
+		a.sqlDialect, err = a.entDialect(ctx, a.driver)
 		if err != nil {
 			return err
 		}
@@ -155,7 +158,7 @@ func (a *Atlas) NamedDiff(ctx context.Context, name string, tables ...*Table) er
 			return err
 		}
 		defer c.Close()
-		a.sqlDialect, err = a.entDialect(entsql.OpenDB(a.dialect, c.DB))
+		a.sqlDialect, err = a.entDialect(ctx, entsql.OpenDB(a.dialect, c.DB))
 		if err != nil {
 			return err
 		}
@@ -169,10 +172,7 @@ func (a *Atlas) NamedDiff(ctx context.Context, name string, tables ...*Table) er
 		return err
 	}
 	if a.universalID {
-		tables = append(tables, NewTable(TypeTable).
-			AddPrimary(&Column{Name: "id", Type: field.TypeUint, Increment: true}).
-			AddColumn(&Column{Name: "type", Type: field.TypeString, Unique: true}),
-		)
+		tables = append(tables, NewTypesTable())
 	}
 	var (
 		err  error
@@ -186,14 +186,17 @@ func (a *Atlas) NamedDiff(ctx context.Context, name string, tables ...*Table) er
 	default:
 		return fmt.Errorf("unknown migration mode: %q", a.mode)
 	}
-	if err != nil {
+	switch {
+	case err != nil:
 		return err
-	}
-	// Skip if the plan has no changes.
-	if len(plan.Changes) == 0 {
+	case len(plan.Changes) == 0:
+		if a.errNoPlan {
+			return migrate.ErrNoPlan
+		}
 		return nil
+	default:
+		return migrate.NewPlanner(nil, a.dir, opts...).WritePlan(plan)
 	}
-	return migrate.NewPlanner(nil, a.dir, opts...).WritePlan(plan)
 }
 
 func (a *Atlas) cleanSchema(ctx context.Context, name string, err0 error) (err error) {
@@ -222,7 +225,7 @@ func (a *Atlas) cleanSchema(ctx context.Context, name string, err0 error) (err e
 func (a *Atlas) VerifyTableRange(ctx context.Context, tables []*Table) error {
 	if a.driver != nil {
 		var err error
-		a.sqlDialect, err = a.entDialect(a.driver)
+		a.sqlDialect, err = a.entDialect(ctx, a.driver)
 		if err != nil {
 			return err
 		}
@@ -232,7 +235,7 @@ func (a *Atlas) VerifyTableRange(ctx context.Context, tables []*Table) error {
 			return err
 		}
 		defer c.Close()
-		a.sqlDialect, err = a.entDialect(entsql.OpenDB(a.dialect, c.DB))
+		a.sqlDialect, err = a.entDialect(ctx, entsql.OpenDB(a.dialect, c.DB))
 		if err != nil {
 			return err
 		}
@@ -299,6 +302,13 @@ func (f DiffFunc) Diff(current, desired *schema.Schema) ([]schema.Change, error)
 func WithDiffHook(hooks ...DiffHook) MigrateOption {
 	return func(a *Atlas) {
 		a.diffHooks = append(a.diffHooks, hooks...)
+	}
+}
+
+// WithDiffOptions adds a list of options to pass to the diff engine.
+func WithDiffOptions(opts ...schema.DiffOption) MigrateOption {
+	return func(a *Atlas) {
+		a.diffOptions = append(a.diffOptions, opts...)
 	}
 }
 
@@ -550,7 +560,14 @@ const (
 
 // StateReader returns an atlas migrate.StateReader returning the state as described by the Ent table slice.
 func (a *Atlas) StateReader(tables ...*Table) migrate.StateReaderFunc {
-	return func(context.Context) (*schema.Realm, error) {
+	return func(ctx context.Context) (*schema.Realm, error) {
+		if a.sqlDialect == nil {
+			drv, err := a.entDialect(ctx, a.driver)
+			if err != nil {
+				return nil, err
+			}
+			a.sqlDialect = drv
+		}
 		ts, err := a.tables(tables)
 		if err != nil {
 			return nil, err
@@ -621,13 +638,10 @@ func (a *Atlas) init() error {
 // create is the Atlas engine based online migration.
 func (a *Atlas) create(ctx context.Context, tables ...*Table) (err error) {
 	if a.universalID {
-		tables = append(tables, NewTable(TypeTable).
-			AddPrimary(&Column{Name: "id", Type: field.TypeUint, Increment: true}).
-			AddColumn(&Column{Name: "type", Type: field.TypeString, Unique: true}),
-		)
+		tables = append(tables, NewTypesTable())
 	}
 	if a.driver != nil {
-		a.sqlDialect, err = a.entDialect(a.driver)
+		a.sqlDialect, err = a.entDialect(ctx, a.driver)
 		if err != nil {
 			return err
 		}
@@ -637,7 +651,7 @@ func (a *Atlas) create(ctx context.Context, tables ...*Table) (err error) {
 			return err
 		}
 		defer c.Close()
-		a.sqlDialect, err = a.entDialect(entsql.OpenDB(a.dialect, c.DB))
+		a.sqlDialect, err = a.entDialect(ctx, entsql.OpenDB(a.dialect, c.DB))
 		if err != nil {
 			return err
 		}
@@ -726,7 +740,7 @@ func (a *Atlas) planReplay(ctx context.Context, name string, tables []*Table) (*
 		return nil, err
 	}
 	if len(s.Tables) > 0 {
-		return nil, migrate.NotCleanError{Reason: fmt.Sprintf("found table %q", s.Tables[0].Name)}
+		return nil, &migrate.NotCleanError{Reason: fmt.Sprintf("found table %q", s.Tables[0].Name)}
 	}
 	// Replay the migration directory on the database.
 	ex, err := migrate.NewExecutor(a.atDriver, a.dir, &migrate.NopRevisionReadWriter{})
@@ -785,11 +799,27 @@ func (a *Atlas) planReplay(ctx context.Context, name string, tables []*Table) (*
 }
 
 func (a *Atlas) diff(ctx context.Context, name string, current, desired *schema.Schema, newTypes []string, opts ...migrate.PlanOption) (*migrate.Plan, error) {
-	changes, err := (&diffDriver{a.atDriver, a.diffHooks}).SchemaDiff(current, desired)
+	changes, err := (&diffDriver{a.atDriver, a.diffHooks}).SchemaDiff(current, desired, a.diffOptions...)
 	if err != nil {
 		return nil, err
 	}
-	plan, err := a.atDriver.PlanChanges(ctx, name, changes, opts...)
+	filtered := make([]schema.Change, 0, len(changes))
+	for _, c := range changes {
+		switch c.(type) {
+		// Select only table creation and modification. The reason we may encounter this, even though specific tables
+		// are passed to Inspect, is if the MySQL system variable 'lower_case_table_names' is set to 1. In such a case,
+		// the given tables will be returned from inspection because MySQL compares case-insensitive, but they won't
+		// match when compare them in code.
+		case *schema.AddTable, *schema.ModifyTable:
+			filtered = append(filtered, c)
+		}
+	}
+	if a.indent != "" {
+		opts = append(opts, func(opts *migrate.PlanOptions) {
+			opts.Indent = a.indent
+		})
+	}
+	plan, err := a.atDriver.PlanChanges(ctx, name, filtered, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -851,6 +881,9 @@ func (a *Atlas) tables(tables []*Table) ([]*schema.Table, error) {
 	ts := make([]*schema.Table, len(tables))
 	for i, et := range tables {
 		at := schema.NewTable(et.Name)
+		if et.Comment != "" {
+			at.SetComment(et.Comment)
+		}
 		a.sqlDialect.atTable(et, at)
 		if a.universalID && et.Name != TypeTable && len(et.PrimaryKey) == 1 {
 			r, err := a.pkRange(et)
@@ -1045,17 +1078,22 @@ func (a *Atlas) symbol(name string) string {
 }
 
 // entDialect returns the Ent dialect as configured by the dialect option.
-func (a *Atlas) entDialect(drv dialect.Driver) (sqlDialect, error) {
+func (a *Atlas) entDialect(ctx context.Context, drv dialect.Driver) (sqlDialect, error) {
+	var d sqlDialect
 	switch a.dialect {
 	case dialect.MySQL:
-		return &MySQL{Driver: drv}, nil
+		d = &MySQL{Driver: drv}
 	case dialect.SQLite:
-		return &SQLite{Driver: drv, WithForeignKeys: a.withForeignKeys}, nil
+		d = &SQLite{Driver: drv, WithForeignKeys: a.withForeignKeys}
 	case dialect.Postgres:
-		return &Postgres{Driver: drv}, nil
+		d = &Postgres{Driver: drv}
 	default:
 		return nil, fmt.Errorf("sql/schema: unsupported dialect %q", a.dialect)
 	}
+	if err := d.init(ctx); err != nil {
+		return nil, err
+	}
+	return d, nil
 }
 
 func (a *Atlas) pkRange(et *Table) (int64, error) {
@@ -1118,13 +1156,15 @@ type diffDriver struct {
 
 // RealmDiff creates the diff between two realms. Since Ent does not care about Realms,
 // not even schema changes, calling this method raises an error.
-func (r *diffDriver) RealmDiff(_, _ *schema.Realm) ([]schema.Change, error) {
+func (r *diffDriver) RealmDiff(_, _ *schema.Realm, _ ...schema.DiffOption) ([]schema.Change, error) {
 	return nil, errors.New("sqlDialect does not support working with realms")
 }
 
 // SchemaDiff creates the diff between two schemas, but includes "diff hooks".
-func (r *diffDriver) SchemaDiff(from, to *schema.Schema) ([]schema.Change, error) {
-	var d Differ = DiffFunc(r.Driver.SchemaDiff)
+func (r *diffDriver) SchemaDiff(from, to *schema.Schema, opts ...schema.DiffOption) ([]schema.Change, error) {
+	var d Differ = DiffFunc(func(current, desired *schema.Schema) ([]schema.Change, error) {
+		return r.Driver.SchemaDiff(current, desired, opts...)
+	})
 	for i := len(r.hooks) - 1; i >= 0; i-- {
 		d = r.hooks[i](d)
 	}

@@ -31,7 +31,7 @@ func (sd *SessionDelete) Where(ps ...predicate.Session) *SessionDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (sd *SessionDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, SessionMutation](ctx, sd.sqlExec, sd.mutation, sd.hooks)
+	return withHooks(ctx, sd.sqlExec, sd.mutation, sd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (sd *SessionDelete) ExecX(ctx context.Context) int {
 }
 
 func (sd *SessionDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: session.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeBytes,
-				Column: session.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(session.Table, sqlgraph.NewFieldSpec(session.FieldID, field.TypeBytes))
 	if ps := sd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type SessionDeleteOne struct {
 	sd *SessionDelete
 }
 
+// Where appends a list predicates to the SessionDelete builder.
+func (sdo *SessionDeleteOne) Where(ps ...predicate.Session) *SessionDeleteOne {
+	sdo.sd.mutation.Where(ps...)
+	return sdo
+}
+
 // Exec executes the deletion query.
 func (sdo *SessionDeleteOne) Exec(ctx context.Context) error {
 	n, err := sdo.sd.Exec(ctx)
@@ -88,5 +86,7 @@ func (sdo *SessionDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (sdo *SessionDeleteOne) ExecX(ctx context.Context) {
-	sdo.sd.ExecX(ctx)
+	if err := sdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

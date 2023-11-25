@@ -39,6 +39,14 @@ func (giu *GroupInfoUpdate) SetDesc(s string) *GroupInfoUpdate {
 	return giu
 }
 
+// SetNillableDesc sets the "desc" field if the given value is not nil.
+func (giu *GroupInfoUpdate) SetNillableDesc(s *string) *GroupInfoUpdate {
+	if s != nil {
+		giu.SetDesc(*s)
+	}
+	return giu
+}
+
 // SetMaxUsers sets the "max_users" field.
 func (giu *GroupInfoUpdate) SetMaxUsers(i int) *GroupInfoUpdate {
 	giu.mutation.ResetMaxUsers()
@@ -103,7 +111,7 @@ func (giu *GroupInfoUpdate) RemoveGroups(g ...*Group) *GroupInfoUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (giu *GroupInfoUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GroupInfoMutation](ctx, giu.gremlinSave, giu.mutation, giu.hooks)
+	return withHooks(ctx, giu.gremlinSave, giu.mutation, giu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -206,6 +214,14 @@ func (giuo *GroupInfoUpdateOne) SetDesc(s string) *GroupInfoUpdateOne {
 	return giuo
 }
 
+// SetNillableDesc sets the "desc" field if the given value is not nil.
+func (giuo *GroupInfoUpdateOne) SetNillableDesc(s *string) *GroupInfoUpdateOne {
+	if s != nil {
+		giuo.SetDesc(*s)
+	}
+	return giuo
+}
+
 // SetMaxUsers sets the "max_users" field.
 func (giuo *GroupInfoUpdateOne) SetMaxUsers(i int) *GroupInfoUpdateOne {
 	giuo.mutation.ResetMaxUsers()
@@ -268,6 +284,12 @@ func (giuo *GroupInfoUpdateOne) RemoveGroups(g ...*Group) *GroupInfoUpdateOne {
 	return giuo.RemoveGroupIDs(ids...)
 }
 
+// Where appends a list predicates to the GroupInfoUpdate builder.
+func (giuo *GroupInfoUpdateOne) Where(ps ...predicate.GroupInfo) *GroupInfoUpdateOne {
+	giuo.mutation.Where(ps...)
+	return giuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (giuo *GroupInfoUpdateOne) Select(field string, fields ...string) *GroupInfoUpdateOne {
@@ -277,7 +299,7 @@ func (giuo *GroupInfoUpdateOne) Select(field string, fields ...string) *GroupInf
 
 // Save executes the query and returns the updated GroupInfo entity.
 func (giuo *GroupInfoUpdateOne) Save(ctx context.Context) (*GroupInfo, error) {
-	return withHooks[*GroupInfo, GroupInfoMutation](ctx, giuo.gremlinSave, giuo.mutation, giuo.hooks)
+	return withHooks(ctx, giuo.gremlinSave, giuo.mutation, giuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

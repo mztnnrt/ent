@@ -31,7 +31,7 @@ func (bd *BlobDelete) Where(ps ...predicate.Blob) *BlobDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (bd *BlobDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, BlobMutation](ctx, bd.sqlExec, bd.mutation, bd.hooks)
+	return withHooks(ctx, bd.sqlExec, bd.mutation, bd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (bd *BlobDelete) ExecX(ctx context.Context) int {
 }
 
 func (bd *BlobDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: blob.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: blob.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(blob.Table, sqlgraph.NewFieldSpec(blob.FieldID, field.TypeUUID))
 	if ps := bd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type BlobDeleteOne struct {
 	bd *BlobDelete
 }
 
+// Where appends a list predicates to the BlobDelete builder.
+func (bdo *BlobDeleteOne) Where(ps ...predicate.Blob) *BlobDeleteOne {
+	bdo.bd.mutation.Where(ps...)
+	return bdo
+}
+
 // Exec executes the deletion query.
 func (bdo *BlobDeleteOne) Exec(ctx context.Context) error {
 	n, err := bdo.bd.Exec(ctx)
@@ -88,5 +86,7 @@ func (bdo *BlobDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (bdo *BlobDeleteOne) ExecX(ctx context.Context) {
-	bdo.bd.ExecX(ctx)
+	if err := bdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -31,7 +31,7 @@ func (ctd *CustomTypeDelete) Where(ps ...predicate.CustomType) *CustomTypeDelete
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ctd *CustomTypeDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, CustomTypeMutation](ctx, ctd.sqlExec, ctd.mutation, ctd.hooks)
+	return withHooks(ctx, ctd.sqlExec, ctd.mutation, ctd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ctd *CustomTypeDelete) ExecX(ctx context.Context) int {
 }
 
 func (ctd *CustomTypeDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: customtype.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: customtype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(customtype.Table, sqlgraph.NewFieldSpec(customtype.FieldID, field.TypeInt))
 	if ps := ctd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type CustomTypeDeleteOne struct {
 	ctd *CustomTypeDelete
 }
 
+// Where appends a list predicates to the CustomTypeDelete builder.
+func (ctdo *CustomTypeDeleteOne) Where(ps ...predicate.CustomType) *CustomTypeDeleteOne {
+	ctdo.ctd.mutation.Where(ps...)
+	return ctdo
+}
+
 // Exec executes the deletion query.
 func (ctdo *CustomTypeDeleteOne) Exec(ctx context.Context) error {
 	n, err := ctdo.ctd.Exec(ctx)
@@ -88,5 +86,7 @@ func (ctdo *CustomTypeDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ctdo *CustomTypeDeleteOne) ExecX(ctx context.Context) {
-	ctdo.ctd.ExecX(ctx)
+	if err := ctdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -37,6 +37,14 @@ func (tu *TenantUpdate) SetName(s string) *TenantUpdate {
 	return tu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (tu *TenantUpdate) SetNillableName(s *string) *TenantUpdate {
+	if s != nil {
+		tu.SetName(*s)
+	}
+	return tu
+}
+
 // Mutation returns the TenantMutation object of the builder.
 func (tu *TenantUpdate) Mutation() *TenantMutation {
 	return tu.mutation
@@ -44,7 +52,7 @@ func (tu *TenantUpdate) Mutation() *TenantMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (tu *TenantUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TenantMutation](ctx, tu.sqlSave, tu.mutation, tu.hooks)
+	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -83,16 +91,7 @@ func (tu *TenantUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tenant.Table,
-			Columns: tenant.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: tenant.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tenant.Table, tenant.Columns, sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeInt))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -129,9 +128,23 @@ func (tuo *TenantUpdateOne) SetName(s string) *TenantUpdateOne {
 	return tuo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (tuo *TenantUpdateOne) SetNillableName(s *string) *TenantUpdateOne {
+	if s != nil {
+		tuo.SetName(*s)
+	}
+	return tuo
+}
+
 // Mutation returns the TenantMutation object of the builder.
 func (tuo *TenantUpdateOne) Mutation() *TenantMutation {
 	return tuo.mutation
+}
+
+// Where appends a list predicates to the TenantUpdate builder.
+func (tuo *TenantUpdateOne) Where(ps ...predicate.Tenant) *TenantUpdateOne {
+	tuo.mutation.Where(ps...)
+	return tuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -143,7 +156,7 @@ func (tuo *TenantUpdateOne) Select(field string, fields ...string) *TenantUpdate
 
 // Save executes the query and returns the updated Tenant entity.
 func (tuo *TenantUpdateOne) Save(ctx context.Context) (*Tenant, error) {
-	return withHooks[*Tenant, TenantMutation](ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -182,16 +195,7 @@ func (tuo *TenantUpdateOne) sqlSave(ctx context.Context) (_node *Tenant, err err
 	if err := tuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   tenant.Table,
-			Columns: tenant.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: tenant.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(tenant.Table, tenant.Columns, sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeInt))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Tenant.id" for update`)}

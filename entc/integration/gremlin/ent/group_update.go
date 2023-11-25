@@ -55,6 +55,14 @@ func (gu *GroupUpdate) SetExpire(t time.Time) *GroupUpdate {
 	return gu
 }
 
+// SetNillableExpire sets the "expire" field if the given value is not nil.
+func (gu *GroupUpdate) SetNillableExpire(t *time.Time) *GroupUpdate {
+	if t != nil {
+		gu.SetExpire(*t)
+	}
+	return gu
+}
+
 // SetType sets the "type" field.
 func (gu *GroupUpdate) SetType(s string) *GroupUpdate {
 	gu.mutation.SetType(s)
@@ -105,6 +113,14 @@ func (gu *GroupUpdate) ClearMaxUsers() *GroupUpdate {
 // SetName sets the "name" field.
 func (gu *GroupUpdate) SetName(s string) *GroupUpdate {
 	gu.mutation.SetName(s)
+	return gu
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (gu *GroupUpdate) SetNillableName(s *string) *GroupUpdate {
+	if s != nil {
+		gu.SetName(*s)
+	}
 	return gu
 }
 
@@ -240,7 +256,7 @@ func (gu *GroupUpdate) ClearInfo() *GroupUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gu *GroupUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GroupMutation](ctx, gu.gremlinSave, gu.mutation, gu.hooks)
+	return withHooks(ctx, gu.gremlinSave, gu.mutation, gu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -427,6 +443,14 @@ func (guo *GroupUpdateOne) SetExpire(t time.Time) *GroupUpdateOne {
 	return guo
 }
 
+// SetNillableExpire sets the "expire" field if the given value is not nil.
+func (guo *GroupUpdateOne) SetNillableExpire(t *time.Time) *GroupUpdateOne {
+	if t != nil {
+		guo.SetExpire(*t)
+	}
+	return guo
+}
+
 // SetType sets the "type" field.
 func (guo *GroupUpdateOne) SetType(s string) *GroupUpdateOne {
 	guo.mutation.SetType(s)
@@ -477,6 +501,14 @@ func (guo *GroupUpdateOne) ClearMaxUsers() *GroupUpdateOne {
 // SetName sets the "name" field.
 func (guo *GroupUpdateOne) SetName(s string) *GroupUpdateOne {
 	guo.mutation.SetName(s)
+	return guo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (guo *GroupUpdateOne) SetNillableName(s *string) *GroupUpdateOne {
+	if s != nil {
+		guo.SetName(*s)
+	}
 	return guo
 }
 
@@ -610,6 +642,12 @@ func (guo *GroupUpdateOne) ClearInfo() *GroupUpdateOne {
 	return guo
 }
 
+// Where appends a list predicates to the GroupUpdate builder.
+func (guo *GroupUpdateOne) Where(ps ...predicate.Group) *GroupUpdateOne {
+	guo.mutation.Where(ps...)
+	return guo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (guo *GroupUpdateOne) Select(field string, fields ...string) *GroupUpdateOne {
@@ -619,7 +657,7 @@ func (guo *GroupUpdateOne) Select(field string, fields ...string) *GroupUpdateOn
 
 // Save executes the query and returns the updated Group entity.
 func (guo *GroupUpdateOne) Save(ctx context.Context) (*Group, error) {
-	return withHooks[*Group, GroupMutation](ctx, guo.gremlinSave, guo.mutation, guo.hooks)
+	return withHooks(ctx, guo.gremlinSave, guo.mutation, guo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

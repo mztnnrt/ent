@@ -31,7 +31,7 @@ func (ftd *FileTypeDelete) Where(ps ...predicate.FileType) *FileTypeDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (ftd *FileTypeDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, FileTypeMutation](ctx, ftd.sqlExec, ftd.mutation, ftd.hooks)
+	return withHooks(ctx, ftd.sqlExec, ftd.mutation, ftd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (ftd *FileTypeDelete) ExecX(ctx context.Context) int {
 }
 
 func (ftd *FileTypeDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: filetype.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: filetype.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(filetype.Table, sqlgraph.NewFieldSpec(filetype.FieldID, field.TypeInt))
 	if ps := ftd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type FileTypeDeleteOne struct {
 	ftd *FileTypeDelete
 }
 
+// Where appends a list predicates to the FileTypeDelete builder.
+func (ftdo *FileTypeDeleteOne) Where(ps ...predicate.FileType) *FileTypeDeleteOne {
+	ftdo.ftd.mutation.Where(ps...)
+	return ftdo
+}
+
 // Exec executes the deletion query.
 func (ftdo *FileTypeDeleteOne) Exec(ctx context.Context) error {
 	n, err := ftdo.ftd.Exec(ctx)
@@ -88,5 +86,7 @@ func (ftdo *FileTypeDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ftdo *FileTypeDeleteOne) ExecX(ctx context.Context) {
-	ftdo.ftd.ExecX(ctx)
+	if err := ftdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

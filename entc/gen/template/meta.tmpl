@@ -50,7 +50,7 @@ const (
 {{ $hasDefault := false }}{{ range $f := $fields }}{{ if and $f.Default (not $f.IsEnum) }}{{ $hasDefault = true }}{{ end }}{{ end }}
 
 {{/* Generate global variables for hooks, validators and policy checkers */}}
-{{ if or $hasDefault $.HasValidators $.NumHooks $.NumPolicy $.NumInterceptors }}
+{{ if or $hasDefault $.HasUpdateDefault $.HasValidators $.NumHooks $.NumPolicy $.NumInterceptors $.HasValueScanner }}
 	{{- $numHooks := $.NumHooks }}
 	{{- if $.NumPolicy }}
 		{{- $numHooks = add $numHooks 1 }}
@@ -87,10 +87,23 @@ const (
 			{{- end }}
 			{{- with $f.Validators }}
 				{{- $name := $f.Validator }}
-				{{- $type :=  printf "func (%s) error" $f.Type.Type }}
+				{{- $type := $f.Type.Type.String }}
+				{{- if $f.IsJSON }}
+					{{- $type = $f.Type.String }}
+				{{- end }}
 				// {{ $name }} is a validator for the "{{ $f.Name }}" field. It is called by the builders before save.
-				{{ $name }} {{ $type }}
+				{{ $name }} {{ printf "func (%s) error" $type }}
 			{{- end }}
+		{{- end }}
+		{{- if $.HasValueScanner }}
+		// ValueScanner of all {{ $.Name }} fields.
+		ValueScanner struct {
+			{{- range $f := $.Fields }}
+				{{- if $f.HasValueScanner }}
+					{{ $f.StructField }} field.TypeValueScanner[{{ $f.Type }}]
+				{{- end }}
+			{{- end }}
+		}
 		{{- end }}
 	)
 {{ end }}
@@ -104,13 +117,13 @@ const (
 			const {{ $f.DefaultName }} {{ $enum }} = "{{ $f.DefaultValue }}"
 		{{ end }}
 	{{ else }}
-		{{/* omit the package name from the type. */}}
+		{{/* Omit the package name from the type. */}}
 		{{ $enum = trimPackage $f.Type.String $.Package }}
 		// {{ $enum }} defines the type for the "{{ $f.Name }}" enum field.
 		type {{ $enum }} string
 
 		{{- if $f.Default }}
-			{{- /*  find the enum that holds the default value. */ -}}
+			{{- /*  Find the enum that holds the default value. */ -}}
 			{{- range $e := $f.Enums }}
 				{{- if eq $e.Value $f.DefaultValue }}
 					// {{ $e.Name }} is the default value of the {{ $enum }} enum.
@@ -142,6 +155,13 @@ const (
 				return fmt.Errorf("{{ $.Package }}: invalid enum value for {{ $f.Name }} field: %q", {{ $receiver }})
 		}
 	}
+{{ end }}
+
+{{ $tmpl = printf "dialect/%s/meta/order" $.Storage }}
+// OrderOption defines the ordering options for the {{ $.Name }} queries.
+type OrderOption func({{ $.Config.Storage.Builder }})
+{{ if hasTemplate $tmpl }}
+	{{ xtemplate $tmpl $ }}
 {{ end }}
 
 {{ template "meta/additional" $ }}

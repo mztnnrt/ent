@@ -44,7 +44,7 @@ func (sc *SpecCreate) Mutation() *SpecMutation {
 
 // Save creates the Spec in the database.
 func (sc *SpecCreate) Save(ctx context.Context) (*Spec, error) {
-	return withHooks[*Spec, SpecMutation](ctx, sc.gremlinSave, sc.mutation, sc.hooks)
+	return withHooks(ctx, sc.gremlinSave, sc.mutation, sc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -86,13 +86,13 @@ func (sc *SpecCreate) gremlinSave(ctx context.Context) (*Spec, error) {
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	s := &Spec{config: sc.config}
-	if err := s.FromResponse(res); err != nil {
+	rnode := &Spec{config: sc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	sc.mutation.id = &s.ID
+	sc.mutation.id = &rnode.ID
 	sc.mutation.done = true
-	return s, nil
+	return rnode, nil
 }
 
 func (sc *SpecCreate) gremlin() *dsl.Traversal {
@@ -106,5 +106,6 @@ func (sc *SpecCreate) gremlin() *dsl.Traversal {
 // SpecCreateBulk is the builder for creating many Spec entities in bulk.
 type SpecCreateBulk struct {
 	config
+	err      error
 	builders []*SpecCreate
 }

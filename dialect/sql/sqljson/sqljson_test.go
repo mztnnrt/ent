@@ -40,6 +40,13 @@ func TestWritePath(t *testing.T) {
 			input: sql.Dialect(dialect.MySQL).
 				Select("*").
 				From(sql.Table("users")).
+				Where(sqljson.ValueEQ("a", true, sqljson.DotPath("b.c[1].d"))),
+			wantQuery: "SELECT * FROM `users` WHERE JSON_EXTRACT(`a`, '$.b.c[1].d') = true",
+		},
+		{
+			input: sql.Dialect(dialect.MySQL).
+				Select("*").
+				From(sql.Table("users")).
 				Where(sqljson.ValueEQ("a", "a", sqljson.DotPath("b.\"c[1]\".d[1][2].e"))),
 			wantQuery: "SELECT * FROM `users` WHERE JSON_EXTRACT(`a`, '$.b.\"c[1]\".d[1][2].e') = ?",
 			wantArgs:  []any{"a"},
@@ -382,6 +389,15 @@ func TestWritePath(t *testing.T) {
 				Where(sqljson.ValueIn("a", []any{1, 2}, sqljson.Path("foo-bar", "3000"))),
 			wantQuery: "SELECT * FROM `users` WHERE JSON_EXTRACT(`a`, '$.\"foo-bar\".\"3000\"') IN (?, ?)",
 			wantArgs:  []any{1, 2},
+		},
+		{
+			input: sql.Dialect(dialect.MySQL).
+				Select("*").
+				From(sql.Table("users")).
+				OrderExpr(
+					sqljson.LenPath("a", sqljson.Path("b")),
+				),
+			wantQuery: "SELECT * FROM `users` ORDER BY JSON_LENGTH(`a`, '$.b')",
 		},
 	}
 	for i, tt := range tests {

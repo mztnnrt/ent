@@ -39,6 +39,14 @@ func (giu *GroupInfoUpdate) SetDesc(s string) *GroupInfoUpdate {
 	return giu
 }
 
+// SetNillableDesc sets the "desc" field if the given value is not nil.
+func (giu *GroupInfoUpdate) SetNillableDesc(s *string) *GroupInfoUpdate {
+	if s != nil {
+		giu.SetDesc(*s)
+	}
+	return giu
+}
+
 // SetMaxUsers sets the "max_users" field.
 func (giu *GroupInfoUpdate) SetMaxUsers(i int) *GroupInfoUpdate {
 	giu.mutation.ResetMaxUsers()
@@ -103,7 +111,7 @@ func (giu *GroupInfoUpdate) RemoveGroups(g ...*Group) *GroupInfoUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (giu *GroupInfoUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GroupInfoMutation](ctx, giu.sqlSave, giu.mutation, giu.hooks)
+	return withHooks(ctx, giu.sqlSave, giu.mutation, giu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -135,16 +143,7 @@ func (giu *GroupInfoUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *Gro
 }
 
 func (giu *GroupInfoUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   groupinfo.Table,
-			Columns: groupinfo.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: groupinfo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(groupinfo.Table, groupinfo.Columns, sqlgraph.NewFieldSpec(groupinfo.FieldID, field.TypeInt))
 	if ps := giu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -169,10 +168,7 @@ func (giu *GroupInfoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -185,10 +181,7 @@ func (giu *GroupInfoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -204,10 +197,7 @@ func (giu *GroupInfoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -240,6 +230,14 @@ type GroupInfoUpdateOne struct {
 // SetDesc sets the "desc" field.
 func (giuo *GroupInfoUpdateOne) SetDesc(s string) *GroupInfoUpdateOne {
 	giuo.mutation.SetDesc(s)
+	return giuo
+}
+
+// SetNillableDesc sets the "desc" field if the given value is not nil.
+func (giuo *GroupInfoUpdateOne) SetNillableDesc(s *string) *GroupInfoUpdateOne {
+	if s != nil {
+		giuo.SetDesc(*s)
+	}
 	return giuo
 }
 
@@ -305,6 +303,12 @@ func (giuo *GroupInfoUpdateOne) RemoveGroups(g ...*Group) *GroupInfoUpdateOne {
 	return giuo.RemoveGroupIDs(ids...)
 }
 
+// Where appends a list predicates to the GroupInfoUpdate builder.
+func (giuo *GroupInfoUpdateOne) Where(ps ...predicate.GroupInfo) *GroupInfoUpdateOne {
+	giuo.mutation.Where(ps...)
+	return giuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (giuo *GroupInfoUpdateOne) Select(field string, fields ...string) *GroupInfoUpdateOne {
@@ -314,7 +318,7 @@ func (giuo *GroupInfoUpdateOne) Select(field string, fields ...string) *GroupInf
 
 // Save executes the query and returns the updated GroupInfo entity.
 func (giuo *GroupInfoUpdateOne) Save(ctx context.Context) (*GroupInfo, error) {
-	return withHooks[*GroupInfo, GroupInfoMutation](ctx, giuo.sqlSave, giuo.mutation, giuo.hooks)
+	return withHooks(ctx, giuo.sqlSave, giuo.mutation, giuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -346,16 +350,7 @@ func (giuo *GroupInfoUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) 
 }
 
 func (giuo *GroupInfoUpdateOne) sqlSave(ctx context.Context) (_node *GroupInfo, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   groupinfo.Table,
-			Columns: groupinfo.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: groupinfo.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(groupinfo.Table, groupinfo.Columns, sqlgraph.NewFieldSpec(groupinfo.FieldID, field.TypeInt))
 	id, ok := giuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GroupInfo.id" for update`)}
@@ -397,10 +392,7 @@ func (giuo *GroupInfoUpdateOne) sqlSave(ctx context.Context) (_node *GroupInfo, 
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -413,10 +405,7 @@ func (giuo *GroupInfoUpdateOne) sqlSave(ctx context.Context) (_node *GroupInfo, 
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -432,10 +421,7 @@ func (giuo *GroupInfoUpdateOne) sqlSave(ctx context.Context) (_node *GroupInfo, 
 			Columns: []string{groupinfo.GroupsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -797,7 +797,7 @@ func (ftc *FieldTypeCreate) Mutation() *FieldTypeMutation {
 // Save creates the FieldType in the database.
 func (ftc *FieldTypeCreate) Save(ctx context.Context) (*FieldType, error) {
 	ftc.defaults()
-	return withHooks[*FieldType, FieldTypeMutation](ctx, ftc.gremlinSave, ftc.mutation, ftc.hooks)
+	return withHooks(ctx, ftc.gremlinSave, ftc.mutation, ftc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -962,13 +962,13 @@ func (ftc *FieldTypeCreate) gremlinSave(ctx context.Context) (*FieldType, error)
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	ft := &FieldType{config: ftc.config}
-	if err := ft.FromResponse(res); err != nil {
+	rnode := &FieldType{config: ftc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	ftc.mutation.id = &ft.ID
+	ftc.mutation.id = &rnode.ID
 	ftc.mutation.done = true
-	return ft, nil
+	return rnode, nil
 }
 
 func (ftc *FieldTypeCreate) gremlin() *dsl.Traversal {
@@ -1174,5 +1174,6 @@ func (ftc *FieldTypeCreate) gremlin() *dsl.Traversal {
 // FieldTypeCreateBulk is the builder for creating many FieldType entities in bulk.
 type FieldTypeCreateBulk struct {
 	config
+	err      error
 	builders []*FieldTypeCreate
 }

@@ -88,7 +88,7 @@ func (ttc *TweetTagCreate) Mutation() *TweetTagMutation {
 // Save creates the TweetTag in the database.
 func (ttc *TweetTagCreate) Save(ctx context.Context) (*TweetTag, error) {
 	ttc.defaults()
-	return withHooks[*TweetTag, TweetTagMutation](ctx, ttc.sqlSave, ttc.mutation, ttc.hooks)
+	return withHooks(ctx, ttc.sqlSave, ttc.mutation, ttc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -171,13 +171,7 @@ func (ttc *TweetTagCreate) sqlSave(ctx context.Context) (*TweetTag, error) {
 func (ttc *TweetTagCreate) createSpec() (*TweetTag, *sqlgraph.CreateSpec) {
 	var (
 		_node = &TweetTag{config: ttc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: tweettag.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: tweettag.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(tweettag.Table, sqlgraph.NewFieldSpec(tweettag.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = ttc.conflict
 	if id, ok := ttc.mutation.ID(); ok {
@@ -196,10 +190,7 @@ func (ttc *TweetTagCreate) createSpec() (*TweetTag, *sqlgraph.CreateSpec) {
 			Columns: []string{tweettag.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -216,10 +207,7 @@ func (ttc *TweetTagCreate) createSpec() (*TweetTag, *sqlgraph.CreateSpec) {
 			Columns: []string{tweettag.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -447,12 +435,16 @@ func (u *TweetTagUpsertOne) IDX(ctx context.Context) uuid.UUID {
 // TweetTagCreateBulk is the builder for creating many TweetTag entities in bulk.
 type TweetTagCreateBulk struct {
 	config
+	err      error
 	builders []*TweetTagCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the TweetTag entities in the database.
 func (ttcb *TweetTagCreateBulk) Save(ctx context.Context) ([]*TweetTag, error) {
+	if ttcb.err != nil {
+		return nil, ttcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ttcb.builders))
 	nodes := make([]*TweetTag, len(ttcb.builders))
 	mutators := make([]Mutator, len(ttcb.builders))
@@ -469,8 +461,8 @@ func (ttcb *TweetTagCreateBulk) Save(ctx context.Context) ([]*TweetTag, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ttcb.builders[i+1].mutation)
 				} else {
@@ -661,6 +653,9 @@ func (u *TweetTagUpsertBulk) UpdateTweetID() *TweetTagUpsertBulk {
 
 // Exec executes the query.
 func (u *TweetTagUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TweetTagCreateBulk instead", i)

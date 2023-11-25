@@ -151,11 +151,7 @@ func HasPrev() predicate.Node {
 // HasPrevWith applies the HasEdge predicate on the "prev" edge with a given conditions (other predicates).
 func HasPrevWith(preds ...predicate.Node) predicate.Node {
 	return predicate.Node(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, PrevTable, PrevColumn),
-		)
+		step := newPrevStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -178,11 +174,7 @@ func HasNext() predicate.Node {
 // HasNextWith applies the HasEdge predicate on the "next" edge with a given conditions (other predicates).
 func HasNextWith(preds ...predicate.Node) predicate.Node {
 	return predicate.Node(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, NextTable, NextColumn),
-		)
+		step := newNextStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -193,32 +185,15 @@ func HasNextWith(preds ...predicate.Node) predicate.Node {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Node(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Node(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Node(sql.NotPredicates(p))
 }

@@ -72,7 +72,7 @@ func (ctc *CustomTypeCreate) Mutation() *CustomTypeMutation {
 
 // Save creates the CustomType in the database.
 func (ctc *CustomTypeCreate) Save(ctx context.Context) (*CustomType, error) {
-	return withHooks[*CustomType, CustomTypeMutation](ctx, ctc.sqlSave, ctc.mutation, ctc.hooks)
+	return withHooks(ctx, ctc.sqlSave, ctc.mutation, ctc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -123,13 +123,7 @@ func (ctc *CustomTypeCreate) sqlSave(ctx context.Context) (*CustomType, error) {
 func (ctc *CustomTypeCreate) createSpec() (*CustomType, *sqlgraph.CreateSpec) {
 	var (
 		_node = &CustomType{config: ctc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: customtype.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: customtype.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(customtype.Table, sqlgraph.NewFieldSpec(customtype.FieldID, field.TypeInt))
 	)
 	if value, ok := ctc.mutation.Custom(); ok {
 		_spec.SetField(customtype.FieldCustom, field.TypeString, value)
@@ -149,11 +143,15 @@ func (ctc *CustomTypeCreate) createSpec() (*CustomType, *sqlgraph.CreateSpec) {
 // CustomTypeCreateBulk is the builder for creating many CustomType entities in bulk.
 type CustomTypeCreateBulk struct {
 	config
+	err      error
 	builders []*CustomTypeCreate
 }
 
 // Save creates the CustomType entities in the database.
 func (ctcb *CustomTypeCreateBulk) Save(ctx context.Context) ([]*CustomType, error) {
+	if ctcb.err != nil {
+		return nil, ctcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ctcb.builders))
 	nodes := make([]*CustomType, len(ctcb.builders))
 	mutators := make([]Mutator, len(ctcb.builders))
@@ -169,8 +167,8 @@ func (ctcb *CustomTypeCreateBulk) Save(ctx context.Context) ([]*CustomType, erro
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ctcb.builders[i+1].mutation)
 				} else {

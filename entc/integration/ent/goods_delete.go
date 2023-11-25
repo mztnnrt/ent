@@ -31,7 +31,7 @@ func (gd *GoodsDelete) Where(ps ...predicate.Goods) *GoodsDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (gd *GoodsDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, GoodsMutation](ctx, gd.sqlExec, gd.mutation, gd.hooks)
+	return withHooks(ctx, gd.sqlExec, gd.mutation, gd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (gd *GoodsDelete) ExecX(ctx context.Context) int {
 }
 
 func (gd *GoodsDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: goods.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: goods.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(goods.Table, sqlgraph.NewFieldSpec(goods.FieldID, field.TypeInt))
 	if ps := gd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type GoodsDeleteOne struct {
 	gd *GoodsDelete
 }
 
+// Where appends a list predicates to the GoodsDelete builder.
+func (gdo *GoodsDeleteOne) Where(ps ...predicate.Goods) *GoodsDeleteOne {
+	gdo.gd.mutation.Where(ps...)
+	return gdo
+}
+
 // Exec executes the deletion query.
 func (gdo *GoodsDeleteOne) Exec(ctx context.Context) error {
 	n, err := gdo.gd.Exec(ctx)
@@ -88,5 +86,7 @@ func (gdo *GoodsDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gdo *GoodsDeleteOne) ExecX(ctx context.Context) {
-	gdo.gd.ExecX(ctx)
+	if err := gdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

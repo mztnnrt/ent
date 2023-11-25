@@ -45,7 +45,7 @@ const config = {
         "pinned": true
       }
     ],
-    "slackChannel": "/docs/slack",
+    "slackChannel": "/docs/community#slack",
     "newsletter": "https://entgo.substack.com/",
     "githubRepo": "https://github.com/ent/ent"
   },
@@ -144,7 +144,7 @@ const config = {
         },
         {to: 'blog', label: 'Blog', position: 'left'},
         {
-          href: '/docs/slack',
+          href: '/docs/community#slack',
           position: 'right',
           className: 'header-slack-link',
           'aria-label': 'Slack channel',
@@ -204,7 +204,7 @@ const config = {
           "title": "Community",
           "items": [
             {"label": "GitHub", "to": "https://github.com/ent/ent"},
-            {"label": "Slack", "to": "/docs/slack"},
+            {"label": "Slack", "to": "/docs/community#slack"},
             {"label": "Discord", "to": "https://discord.gg/qZmPgTE6RX"},
             {"label": "Newsletter", "to": "https://entgo.substack.com/"},
             {"label": "Discussions", "to": "https://github.com/ent/ent/discussions"},
@@ -253,11 +253,12 @@ const config = {
       `,
     },
     announcementBar: {
-      id: 'announcementBar-1', // Increment on change
-      content: `⭐️ If you like Ent, give it a star on <a target="_blank" rel="noopener noreferrer" href="https://github.com/ent/ent">GitHub</a> and follow us on <a target="_blank" rel="noopener noreferrer" href="https://twitter.com/entgo_io" >Twitter</a> ${TwitterSvg}`,
+      id: 'announcementBar-2', // Increment on change
+      // content: `⭐️ If you like Ent, give it a star on <a target="_blank" rel="noopener noreferrer" href="https://github.com/ent/ent">GitHub</a> and follow us on <a target="_blank" rel="noopener noreferrer" href="https://twitter.com/entgo_io" >Twitter</a> ${TwitterSvg}`,
+      content: `<a style="text-decoration: none;" target="_blank" rel="noopener noreferrer" href="https://twitter.com/Israel/status/1713931519620788538">The Ent Team Stands With Israel 🇮🇱</a>`,
       backgroundColor: '#fafbfc',
-      textColor: '#091E42',
-      isCloseable: true,
+      textColor: '#404756',
+      isCloseable: false,
     },
   }
 };

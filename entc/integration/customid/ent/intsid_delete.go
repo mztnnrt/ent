@@ -31,7 +31,7 @@ func (isd *IntSIDDelete) Where(ps ...predicate.IntSID) *IntSIDDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (isd *IntSIDDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, IntSIDMutation](ctx, isd.sqlExec, isd.mutation, isd.hooks)
+	return withHooks(ctx, isd.sqlExec, isd.mutation, isd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (isd *IntSIDDelete) ExecX(ctx context.Context) int {
 }
 
 func (isd *IntSIDDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: intsid.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt64,
-				Column: intsid.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(intsid.Table, sqlgraph.NewFieldSpec(intsid.FieldID, field.TypeInt64))
 	if ps := isd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type IntSIDDeleteOne struct {
 	isd *IntSIDDelete
 }
 
+// Where appends a list predicates to the IntSIDDelete builder.
+func (isdo *IntSIDDeleteOne) Where(ps ...predicate.IntSID) *IntSIDDeleteOne {
+	isdo.isd.mutation.Where(ps...)
+	return isdo
+}
+
 // Exec executes the deletion query.
 func (isdo *IntSIDDeleteOne) Exec(ctx context.Context) error {
 	n, err := isdo.isd.Exec(ctx)
@@ -88,5 +86,7 @@ func (isdo *IntSIDDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (isdo *IntSIDDeleteOne) ExecX(ctx context.Context) {
-	isdo.isd.ExecX(ctx)
+	if err := isdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

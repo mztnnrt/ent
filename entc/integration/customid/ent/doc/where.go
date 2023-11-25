@@ -152,11 +152,7 @@ func HasParent() predicate.Doc {
 // HasParentWith applies the HasEdge predicate on the "parent" edge with a given conditions (other predicates).
 func HasParentWith(preds ...predicate.Doc) predicate.Doc {
 	return predicate.Doc(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
-		)
+		step := newParentStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -179,11 +175,7 @@ func HasChildren() predicate.Doc {
 // HasChildrenWith applies the HasEdge predicate on the "children" edge with a given conditions (other predicates).
 func HasChildrenWith(preds ...predicate.Doc) predicate.Doc {
 	return predicate.Doc(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ChildrenTable, ChildrenColumn),
-		)
+		step := newChildrenStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -206,11 +198,7 @@ func HasRelated() predicate.Doc {
 // HasRelatedWith applies the HasEdge predicate on the "related" edge with a given conditions (other predicates).
 func HasRelatedWith(preds ...predicate.Doc) predicate.Doc {
 	return predicate.Doc(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, RelatedTable, RelatedPrimaryKey...),
-		)
+		step := newRelatedStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -221,32 +209,15 @@ func HasRelatedWith(preds ...predicate.Doc) predicate.Doc {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Doc) predicate.Doc {
-	return predicate.Doc(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Doc(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Doc) predicate.Doc {
-	return predicate.Doc(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Doc(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Doc) predicate.Doc {
-	return predicate.Doc(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Doc(sql.NotPredicates(p))
 }

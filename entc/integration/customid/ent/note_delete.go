@@ -31,7 +31,7 @@ func (nd *NoteDelete) Where(ps ...predicate.Note) *NoteDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (nd *NoteDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, NoteMutation](ctx, nd.sqlExec, nd.mutation, nd.hooks)
+	return withHooks(ctx, nd.sqlExec, nd.mutation, nd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (nd *NoteDelete) ExecX(ctx context.Context) int {
 }
 
 func (nd *NoteDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: note.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
-				Column: note.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(note.Table, sqlgraph.NewFieldSpec(note.FieldID, field.TypeString))
 	if ps := nd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type NoteDeleteOne struct {
 	nd *NoteDelete
 }
 
+// Where appends a list predicates to the NoteDelete builder.
+func (ndo *NoteDeleteOne) Where(ps ...predicate.Note) *NoteDeleteOne {
+	ndo.nd.mutation.Where(ps...)
+	return ndo
+}
+
 // Exec executes the deletion query.
 func (ndo *NoteDeleteOne) Exec(ctx context.Context) error {
 	n, err := ndo.nd.Exec(ctx)
@@ -88,5 +86,7 @@ func (ndo *NoteDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ndo *NoteDeleteOne) ExecX(ctx context.Context) {
-	ndo.nd.ExecX(ctx)
+	if err := ndo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

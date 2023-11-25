@@ -15,9 +15,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/entc/integration/ent/predicate"
 	"entgo.io/ent/entc/integration/ent/schema/task"
-	"entgo.io/ent/schema/field"
-
 	enttask "entgo.io/ent/entc/integration/ent/task"
+	"entgo.io/ent/schema/field"
 )
 
 // TaskUpdate is the builder for updating Task entities.
@@ -67,6 +66,114 @@ func (tu *TaskUpdate) ClearPriorities() *TaskUpdate {
 	return tu
 }
 
+// SetName sets the "name" field.
+func (tu *TaskUpdate) SetName(s string) *TaskUpdate {
+	tu.mutation.SetName(s)
+	return tu
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableName(s *string) *TaskUpdate {
+	if s != nil {
+		tu.SetName(*s)
+	}
+	return tu
+}
+
+// ClearName clears the value of the "name" field.
+func (tu *TaskUpdate) ClearName() *TaskUpdate {
+	tu.mutation.ClearName()
+	return tu
+}
+
+// SetOwner sets the "owner" field.
+func (tu *TaskUpdate) SetOwner(s string) *TaskUpdate {
+	tu.mutation.SetOwner(s)
+	return tu
+}
+
+// SetNillableOwner sets the "owner" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableOwner(s *string) *TaskUpdate {
+	if s != nil {
+		tu.SetOwner(*s)
+	}
+	return tu
+}
+
+// ClearOwner clears the value of the "owner" field.
+func (tu *TaskUpdate) ClearOwner() *TaskUpdate {
+	tu.mutation.ClearOwner()
+	return tu
+}
+
+// SetOrder sets the "order" field.
+func (tu *TaskUpdate) SetOrder(i int) *TaskUpdate {
+	tu.mutation.ResetOrder()
+	tu.mutation.SetOrder(i)
+	return tu
+}
+
+// SetNillableOrder sets the "order" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableOrder(i *int) *TaskUpdate {
+	if i != nil {
+		tu.SetOrder(*i)
+	}
+	return tu
+}
+
+// AddOrder adds i to the "order" field.
+func (tu *TaskUpdate) AddOrder(i int) *TaskUpdate {
+	tu.mutation.AddOrder(i)
+	return tu
+}
+
+// ClearOrder clears the value of the "order" field.
+func (tu *TaskUpdate) ClearOrder() *TaskUpdate {
+	tu.mutation.ClearOrder()
+	return tu
+}
+
+// SetOrderOption sets the "order_option" field.
+func (tu *TaskUpdate) SetOrderOption(i int) *TaskUpdate {
+	tu.mutation.ResetOrderOption()
+	tu.mutation.SetOrderOption(i)
+	return tu
+}
+
+// SetNillableOrderOption sets the "order_option" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableOrderOption(i *int) *TaskUpdate {
+	if i != nil {
+		tu.SetOrderOption(*i)
+	}
+	return tu
+}
+
+// AddOrderOption adds i to the "order_option" field.
+func (tu *TaskUpdate) AddOrderOption(i int) *TaskUpdate {
+	tu.mutation.AddOrderOption(i)
+	return tu
+}
+
+// ClearOrderOption clears the value of the "order_option" field.
+func (tu *TaskUpdate) ClearOrderOption() *TaskUpdate {
+	tu.mutation.ClearOrderOption()
+	return tu
+}
+
+// SetOp sets the "op" field.
+func (tu *TaskUpdate) SetOp(s string) *TaskUpdate {
+	tu.mutation.SetOpField(s)
+	return tu
+}
+
+// SetNillableOp sets the "op" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableOp(s *string) *TaskUpdate {
+	if s != nil {
+		tu.SetOp(*s)
+	}
+	return tu
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (tu *TaskUpdate) Mutation() *TaskMutation {
 	return tu.mutation
@@ -74,7 +181,7 @@ func (tu *TaskUpdate) Mutation() *TaskMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (tu *TaskUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, TaskMutation](ctx, tu.sqlSave, tu.mutation, tu.hooks)
+	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -102,8 +209,13 @@ func (tu *TaskUpdate) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tu *TaskUpdate) check() error {
 	if v, ok := tu.mutation.Priority(); ok {
-		if err := enttask.PriorityValidator(int(v)); err != nil {
+		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
+	}
+	if v, ok := tu.mutation.GetOp(); ok {
+		if err := enttask.OpValidator(v); err != nil {
+			return &ValidationError{Name: "op", err: fmt.Errorf(`ent: validator failed for field "Task.op": %w`, err)}
 		}
 	}
 	return nil
@@ -119,16 +231,7 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := tu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   enttask.Table,
-			Columns: enttask.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: enttask.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(enttask.Table, enttask.Columns, sqlgraph.NewFieldSpec(enttask.FieldID, field.TypeInt))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -147,6 +250,39 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if tu.mutation.PrioritiesCleared() {
 		_spec.ClearField(enttask.FieldPriorities, field.TypeJSON)
+	}
+	if value, ok := tu.mutation.Name(); ok {
+		_spec.SetField(enttask.FieldName, field.TypeString, value)
+	}
+	if tu.mutation.NameCleared() {
+		_spec.ClearField(enttask.FieldName, field.TypeString)
+	}
+	if value, ok := tu.mutation.Owner(); ok {
+		_spec.SetField(enttask.FieldOwner, field.TypeString, value)
+	}
+	if tu.mutation.OwnerCleared() {
+		_spec.ClearField(enttask.FieldOwner, field.TypeString)
+	}
+	if value, ok := tu.mutation.Order(); ok {
+		_spec.SetField(enttask.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := tu.mutation.AddedOrder(); ok {
+		_spec.AddField(enttask.FieldOrder, field.TypeInt, value)
+	}
+	if tu.mutation.OrderCleared() {
+		_spec.ClearField(enttask.FieldOrder, field.TypeInt)
+	}
+	if value, ok := tu.mutation.OrderOption(); ok {
+		_spec.SetField(enttask.FieldOrderOption, field.TypeInt, value)
+	}
+	if value, ok := tu.mutation.AddedOrderOption(); ok {
+		_spec.AddField(enttask.FieldOrderOption, field.TypeInt, value)
+	}
+	if tu.mutation.OrderOptionCleared() {
+		_spec.ClearField(enttask.FieldOrderOption, field.TypeInt)
+	}
+	if value, ok := tu.mutation.GetOp(); ok {
+		_spec.SetField(enttask.FieldOp, field.TypeString, value)
 	}
 	_spec.AddModifiers(tu.modifiers...)
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
@@ -203,9 +339,123 @@ func (tuo *TaskUpdateOne) ClearPriorities() *TaskUpdateOne {
 	return tuo
 }
 
+// SetName sets the "name" field.
+func (tuo *TaskUpdateOne) SetName(s string) *TaskUpdateOne {
+	tuo.mutation.SetName(s)
+	return tuo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableName(s *string) *TaskUpdateOne {
+	if s != nil {
+		tuo.SetName(*s)
+	}
+	return tuo
+}
+
+// ClearName clears the value of the "name" field.
+func (tuo *TaskUpdateOne) ClearName() *TaskUpdateOne {
+	tuo.mutation.ClearName()
+	return tuo
+}
+
+// SetOwner sets the "owner" field.
+func (tuo *TaskUpdateOne) SetOwner(s string) *TaskUpdateOne {
+	tuo.mutation.SetOwner(s)
+	return tuo
+}
+
+// SetNillableOwner sets the "owner" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableOwner(s *string) *TaskUpdateOne {
+	if s != nil {
+		tuo.SetOwner(*s)
+	}
+	return tuo
+}
+
+// ClearOwner clears the value of the "owner" field.
+func (tuo *TaskUpdateOne) ClearOwner() *TaskUpdateOne {
+	tuo.mutation.ClearOwner()
+	return tuo
+}
+
+// SetOrder sets the "order" field.
+func (tuo *TaskUpdateOne) SetOrder(i int) *TaskUpdateOne {
+	tuo.mutation.ResetOrder()
+	tuo.mutation.SetOrder(i)
+	return tuo
+}
+
+// SetNillableOrder sets the "order" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableOrder(i *int) *TaskUpdateOne {
+	if i != nil {
+		tuo.SetOrder(*i)
+	}
+	return tuo
+}
+
+// AddOrder adds i to the "order" field.
+func (tuo *TaskUpdateOne) AddOrder(i int) *TaskUpdateOne {
+	tuo.mutation.AddOrder(i)
+	return tuo
+}
+
+// ClearOrder clears the value of the "order" field.
+func (tuo *TaskUpdateOne) ClearOrder() *TaskUpdateOne {
+	tuo.mutation.ClearOrder()
+	return tuo
+}
+
+// SetOrderOption sets the "order_option" field.
+func (tuo *TaskUpdateOne) SetOrderOption(i int) *TaskUpdateOne {
+	tuo.mutation.ResetOrderOption()
+	tuo.mutation.SetOrderOption(i)
+	return tuo
+}
+
+// SetNillableOrderOption sets the "order_option" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableOrderOption(i *int) *TaskUpdateOne {
+	if i != nil {
+		tuo.SetOrderOption(*i)
+	}
+	return tuo
+}
+
+// AddOrderOption adds i to the "order_option" field.
+func (tuo *TaskUpdateOne) AddOrderOption(i int) *TaskUpdateOne {
+	tuo.mutation.AddOrderOption(i)
+	return tuo
+}
+
+// ClearOrderOption clears the value of the "order_option" field.
+func (tuo *TaskUpdateOne) ClearOrderOption() *TaskUpdateOne {
+	tuo.mutation.ClearOrderOption()
+	return tuo
+}
+
+// SetOp sets the "op" field.
+func (tuo *TaskUpdateOne) SetOp(s string) *TaskUpdateOne {
+	tuo.mutation.SetOpField(s)
+	return tuo
+}
+
+// SetNillableOp sets the "op" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableOp(s *string) *TaskUpdateOne {
+	if s != nil {
+		tuo.SetOp(*s)
+	}
+	return tuo
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (tuo *TaskUpdateOne) Mutation() *TaskMutation {
 	return tuo.mutation
+}
+
+// Where appends a list predicates to the TaskUpdate builder.
+func (tuo *TaskUpdateOne) Where(ps ...predicate.Task) *TaskUpdateOne {
+	tuo.mutation.Where(ps...)
+	return tuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -217,7 +467,7 @@ func (tuo *TaskUpdateOne) Select(field string, fields ...string) *TaskUpdateOne 
 
 // Save executes the query and returns the updated Task entity.
 func (tuo *TaskUpdateOne) Save(ctx context.Context) (*Task, error) {
-	return withHooks[*Task, TaskMutation](ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -245,8 +495,13 @@ func (tuo *TaskUpdateOne) ExecX(ctx context.Context) {
 // check runs all checks and user-defined validators on the builder.
 func (tuo *TaskUpdateOne) check() error {
 	if v, ok := tuo.mutation.Priority(); ok {
-		if err := enttask.PriorityValidator(int(v)); err != nil {
+		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Task.priority": %w`, err)}
+		}
+	}
+	if v, ok := tuo.mutation.GetOp(); ok {
+		if err := enttask.OpValidator(v); err != nil {
+			return &ValidationError{Name: "op", err: fmt.Errorf(`ent: validator failed for field "Task.op": %w`, err)}
 		}
 	}
 	return nil
@@ -262,16 +517,7 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 	if err := tuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   enttask.Table,
-			Columns: enttask.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: enttask.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(enttask.Table, enttask.Columns, sqlgraph.NewFieldSpec(enttask.FieldID, field.TypeInt))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Task.id" for update`)}
@@ -307,6 +553,39 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 	}
 	if tuo.mutation.PrioritiesCleared() {
 		_spec.ClearField(enttask.FieldPriorities, field.TypeJSON)
+	}
+	if value, ok := tuo.mutation.Name(); ok {
+		_spec.SetField(enttask.FieldName, field.TypeString, value)
+	}
+	if tuo.mutation.NameCleared() {
+		_spec.ClearField(enttask.FieldName, field.TypeString)
+	}
+	if value, ok := tuo.mutation.Owner(); ok {
+		_spec.SetField(enttask.FieldOwner, field.TypeString, value)
+	}
+	if tuo.mutation.OwnerCleared() {
+		_spec.ClearField(enttask.FieldOwner, field.TypeString)
+	}
+	if value, ok := tuo.mutation.Order(); ok {
+		_spec.SetField(enttask.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := tuo.mutation.AddedOrder(); ok {
+		_spec.AddField(enttask.FieldOrder, field.TypeInt, value)
+	}
+	if tuo.mutation.OrderCleared() {
+		_spec.ClearField(enttask.FieldOrder, field.TypeInt)
+	}
+	if value, ok := tuo.mutation.OrderOption(); ok {
+		_spec.SetField(enttask.FieldOrderOption, field.TypeInt, value)
+	}
+	if value, ok := tuo.mutation.AddedOrderOption(); ok {
+		_spec.AddField(enttask.FieldOrderOption, field.TypeInt, value)
+	}
+	if tuo.mutation.OrderOptionCleared() {
+		_spec.ClearField(enttask.FieldOrderOption, field.TypeInt)
+	}
+	if value, ok := tuo.mutation.GetOp(); ok {
+		_spec.SetField(enttask.FieldOp, field.TypeString, value)
 	}
 	_spec.AddModifiers(tuo.modifiers...)
 	_node = &Task{config: tuo.config}

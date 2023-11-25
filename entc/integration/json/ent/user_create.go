@@ -75,6 +75,24 @@ func (uc *UserCreate) SetStrings(s []string) *UserCreate {
 	return uc
 }
 
+// SetIntsValidate sets the "ints_validate" field.
+func (uc *UserCreate) SetIntsValidate(i []int) *UserCreate {
+	uc.mutation.SetIntsValidate(i)
+	return uc
+}
+
+// SetFloatsValidate sets the "floats_validate" field.
+func (uc *UserCreate) SetFloatsValidate(f []float64) *UserCreate {
+	uc.mutation.SetFloatsValidate(f)
+	return uc
+}
+
+// SetStringsValidate sets the "strings_validate" field.
+func (uc *UserCreate) SetStringsValidate(s []string) *UserCreate {
+	uc.mutation.SetStringsValidate(s)
+	return uc
+}
+
 // SetAddr sets the "addr" field.
 func (uc *UserCreate) SetAddr(s schema.Addr) *UserCreate {
 	uc.mutation.SetAddr(s)
@@ -89,6 +107,12 @@ func (uc *UserCreate) SetNillableAddr(s *schema.Addr) *UserCreate {
 	return uc
 }
 
+// SetUnknown sets the "unknown" field.
+func (uc *UserCreate) SetUnknown(a any) *UserCreate {
+	uc.mutation.SetUnknown(a)
+	return uc
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -97,7 +121,7 @@ func (uc *UserCreate) Mutation() *UserMutation {
 // Save creates the User in the database.
 func (uc *UserCreate) Save(ctx context.Context) (*User, error) {
 	uc.defaults()
-	return withHooks[*User, UserMutation](ctx, uc.sqlSave, uc.mutation, uc.hooks)
+	return withHooks(ctx, uc.sqlSave, uc.mutation, uc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -139,6 +163,21 @@ func (uc *UserCreate) check() error {
 	if _, ok := uc.mutation.Dirs(); !ok {
 		return &ValidationError{Name: "dirs", err: errors.New(`ent: missing required field "User.dirs"`)}
 	}
+	if v, ok := uc.mutation.IntsValidate(); ok {
+		if err := user.IntsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "ints_validate", err: fmt.Errorf(`ent: validator failed for field "User.ints_validate": %w`, err)}
+		}
+	}
+	if v, ok := uc.mutation.FloatsValidate(); ok {
+		if err := user.FloatsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "floats_validate", err: fmt.Errorf(`ent: validator failed for field "User.floats_validate": %w`, err)}
+		}
+	}
+	if v, ok := uc.mutation.StringsValidate(); ok {
+		if err := user.StringsValidateValidator(v); err != nil {
+			return &ValidationError{Name: "strings_validate", err: fmt.Errorf(`ent: validator failed for field "User.strings_validate": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -163,13 +202,7 @@ func (uc *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	var (
 		_node = &User{config: uc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: user.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: user.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(user.Table, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
 	)
 	if value, ok := uc.mutation.T(); ok {
 		_spec.SetField(user.FieldT, field.TypeJSON, value)
@@ -203,9 +236,25 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldStrings, field.TypeJSON, value)
 		_node.Strings = value
 	}
+	if value, ok := uc.mutation.IntsValidate(); ok {
+		_spec.SetField(user.FieldIntsValidate, field.TypeJSON, value)
+		_node.IntsValidate = value
+	}
+	if value, ok := uc.mutation.FloatsValidate(); ok {
+		_spec.SetField(user.FieldFloatsValidate, field.TypeJSON, value)
+		_node.FloatsValidate = value
+	}
+	if value, ok := uc.mutation.StringsValidate(); ok {
+		_spec.SetField(user.FieldStringsValidate, field.TypeJSON, value)
+		_node.StringsValidate = value
+	}
 	if value, ok := uc.mutation.Addr(); ok {
 		_spec.SetField(user.FieldAddr, field.TypeJSON, value)
 		_node.Addr = value
+	}
+	if value, ok := uc.mutation.Unknown(); ok {
+		_spec.SetField(user.FieldUnknown, field.TypeJSON, value)
+		_node.Unknown = value
 	}
 	return _node, _spec
 }
@@ -213,11 +262,15 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 // UserCreateBulk is the builder for creating many User entities in bulk.
 type UserCreateBulk struct {
 	config
+	err      error
 	builders []*UserCreate
 }
 
 // Save creates the User entities in the database.
 func (ucb *UserCreateBulk) Save(ctx context.Context) ([]*User, error) {
+	if ucb.err != nil {
+		return nil, ucb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ucb.builders))
 	nodes := make([]*User, len(ucb.builders))
 	mutators := make([]Mutator, len(ucb.builders))
@@ -234,8 +287,8 @@ func (ucb *UserCreateBulk) Save(ctx context.Context) ([]*User, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, ucb.builders[i+1].mutation)
 				} else {

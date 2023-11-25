@@ -54,9 +54,25 @@ func (ugu *UserGroupUpdate) SetUserID(i int) *UserGroupUpdate {
 	return ugu
 }
 
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (ugu *UserGroupUpdate) SetNillableUserID(i *int) *UserGroupUpdate {
+	if i != nil {
+		ugu.SetUserID(*i)
+	}
+	return ugu
+}
+
 // SetGroupID sets the "group_id" field.
 func (ugu *UserGroupUpdate) SetGroupID(i int) *UserGroupUpdate {
 	ugu.mutation.SetGroupID(i)
+	return ugu
+}
+
+// SetNillableGroupID sets the "group_id" field if the given value is not nil.
+func (ugu *UserGroupUpdate) SetNillableGroupID(i *int) *UserGroupUpdate {
+	if i != nil {
+		ugu.SetGroupID(*i)
+	}
 	return ugu
 }
 
@@ -89,7 +105,7 @@ func (ugu *UserGroupUpdate) ClearGroup() *UserGroupUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ugu *UserGroupUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, UserGroupMutation](ctx, ugu.sqlSave, ugu.mutation, ugu.hooks)
+	return withHooks(ctx, ugu.sqlSave, ugu.mutation, ugu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -129,16 +145,7 @@ func (ugu *UserGroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ugu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   usergroup.Table,
-			Columns: usergroup.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: usergroup.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(usergroup.Table, usergroup.Columns, sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt))
 	if ps := ugu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -157,10 +164,7 @@ func (ugu *UserGroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{usergroup.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -173,10 +177,7 @@ func (ugu *UserGroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{usergroup.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -192,10 +193,7 @@ func (ugu *UserGroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{usergroup.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -208,10 +206,7 @@ func (ugu *UserGroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{usergroup.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -259,9 +254,25 @@ func (uguo *UserGroupUpdateOne) SetUserID(i int) *UserGroupUpdateOne {
 	return uguo
 }
 
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (uguo *UserGroupUpdateOne) SetNillableUserID(i *int) *UserGroupUpdateOne {
+	if i != nil {
+		uguo.SetUserID(*i)
+	}
+	return uguo
+}
+
 // SetGroupID sets the "group_id" field.
 func (uguo *UserGroupUpdateOne) SetGroupID(i int) *UserGroupUpdateOne {
 	uguo.mutation.SetGroupID(i)
+	return uguo
+}
+
+// SetNillableGroupID sets the "group_id" field if the given value is not nil.
+func (uguo *UserGroupUpdateOne) SetNillableGroupID(i *int) *UserGroupUpdateOne {
+	if i != nil {
+		uguo.SetGroupID(*i)
+	}
 	return uguo
 }
 
@@ -292,6 +303,12 @@ func (uguo *UserGroupUpdateOne) ClearGroup() *UserGroupUpdateOne {
 	return uguo
 }
 
+// Where appends a list predicates to the UserGroupUpdate builder.
+func (uguo *UserGroupUpdateOne) Where(ps ...predicate.UserGroup) *UserGroupUpdateOne {
+	uguo.mutation.Where(ps...)
+	return uguo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (uguo *UserGroupUpdateOne) Select(field string, fields ...string) *UserGroupUpdateOne {
@@ -301,7 +318,7 @@ func (uguo *UserGroupUpdateOne) Select(field string, fields ...string) *UserGrou
 
 // Save executes the query and returns the updated UserGroup entity.
 func (uguo *UserGroupUpdateOne) Save(ctx context.Context) (*UserGroup, error) {
-	return withHooks[*UserGroup, UserGroupMutation](ctx, uguo.sqlSave, uguo.mutation, uguo.hooks)
+	return withHooks(ctx, uguo.sqlSave, uguo.mutation, uguo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -341,16 +358,7 @@ func (uguo *UserGroupUpdateOne) sqlSave(ctx context.Context) (_node *UserGroup, 
 	if err := uguo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   usergroup.Table,
-			Columns: usergroup.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: usergroup.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(usergroup.Table, usergroup.Columns, sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt))
 	id, ok := uguo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "UserGroup.id" for update`)}
@@ -386,10 +394,7 @@ func (uguo *UserGroupUpdateOne) sqlSave(ctx context.Context) (_node *UserGroup, 
 			Columns: []string{usergroup.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -402,10 +407,7 @@ func (uguo *UserGroupUpdateOne) sqlSave(ctx context.Context) (_node *UserGroup, 
 			Columns: []string{usergroup.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -421,10 +423,7 @@ func (uguo *UserGroupUpdateOne) sqlSave(ctx context.Context) (_node *UserGroup, 
 			Columns: []string{usergroup.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -437,10 +436,7 @@ func (uguo *UserGroupUpdateOne) sqlSave(ctx context.Context) (_node *UserGroup, 
 			Columns: []string{usergroup.GroupColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: group.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

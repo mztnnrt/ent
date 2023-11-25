@@ -38,23 +38,37 @@ func (nu *NodeUpdate) SetValue(i int) *NodeUpdate {
 	return nu
 }
 
+// SetNillableValue sets the "value" field if the given value is not nil.
+func (nu *NodeUpdate) SetNillableValue(i *int) *NodeUpdate {
+	if i != nil {
+		nu.SetValue(*i)
+	}
+	return nu
+}
+
 // AddValue adds i to the "value" field.
 func (nu *NodeUpdate) AddValue(i int) *NodeUpdate {
 	nu.mutation.AddValue(i)
 	return nu
 }
 
-// SetParentID sets the "parent" edge to the Node entity by ID.
-func (nu *NodeUpdate) SetParentID(id int) *NodeUpdate {
-	nu.mutation.SetParentID(id)
+// SetParentID sets the "parent_id" field.
+func (nu *NodeUpdate) SetParentID(i int) *NodeUpdate {
+	nu.mutation.SetParentID(i)
 	return nu
 }
 
-// SetNillableParentID sets the "parent" edge to the Node entity by ID if the given value is not nil.
-func (nu *NodeUpdate) SetNillableParentID(id *int) *NodeUpdate {
-	if id != nil {
-		nu = nu.SetParentID(*id)
+// SetNillableParentID sets the "parent_id" field if the given value is not nil.
+func (nu *NodeUpdate) SetNillableParentID(i *int) *NodeUpdate {
+	if i != nil {
+		nu.SetParentID(*i)
 	}
+	return nu
+}
+
+// ClearParentID clears the value of the "parent_id" field.
+func (nu *NodeUpdate) ClearParentID() *NodeUpdate {
+	nu.mutation.ClearParentID()
 	return nu
 }
 
@@ -112,7 +126,7 @@ func (nu *NodeUpdate) RemoveChildren(n ...*Node) *NodeUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (nu *NodeUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, NodeMutation](ctx, nu.sqlSave, nu.mutation, nu.hooks)
+	return withHooks(ctx, nu.sqlSave, nu.mutation, nu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -138,16 +152,7 @@ func (nu *NodeUpdate) ExecX(ctx context.Context) {
 }
 
 func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	if ps := nu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -169,10 +174,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -185,10 +187,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -204,10 +203,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -220,10 +216,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -239,10 +232,7 @@ func (nu *NodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -277,23 +267,37 @@ func (nuo *NodeUpdateOne) SetValue(i int) *NodeUpdateOne {
 	return nuo
 }
 
+// SetNillableValue sets the "value" field if the given value is not nil.
+func (nuo *NodeUpdateOne) SetNillableValue(i *int) *NodeUpdateOne {
+	if i != nil {
+		nuo.SetValue(*i)
+	}
+	return nuo
+}
+
 // AddValue adds i to the "value" field.
 func (nuo *NodeUpdateOne) AddValue(i int) *NodeUpdateOne {
 	nuo.mutation.AddValue(i)
 	return nuo
 }
 
-// SetParentID sets the "parent" edge to the Node entity by ID.
-func (nuo *NodeUpdateOne) SetParentID(id int) *NodeUpdateOne {
-	nuo.mutation.SetParentID(id)
+// SetParentID sets the "parent_id" field.
+func (nuo *NodeUpdateOne) SetParentID(i int) *NodeUpdateOne {
+	nuo.mutation.SetParentID(i)
 	return nuo
 }
 
-// SetNillableParentID sets the "parent" edge to the Node entity by ID if the given value is not nil.
-func (nuo *NodeUpdateOne) SetNillableParentID(id *int) *NodeUpdateOne {
-	if id != nil {
-		nuo = nuo.SetParentID(*id)
+// SetNillableParentID sets the "parent_id" field if the given value is not nil.
+func (nuo *NodeUpdateOne) SetNillableParentID(i *int) *NodeUpdateOne {
+	if i != nil {
+		nuo.SetParentID(*i)
 	}
+	return nuo
+}
+
+// ClearParentID clears the value of the "parent_id" field.
+func (nuo *NodeUpdateOne) ClearParentID() *NodeUpdateOne {
+	nuo.mutation.ClearParentID()
 	return nuo
 }
 
@@ -349,6 +353,12 @@ func (nuo *NodeUpdateOne) RemoveChildren(n ...*Node) *NodeUpdateOne {
 	return nuo.RemoveChildIDs(ids...)
 }
 
+// Where appends a list predicates to the NodeUpdate builder.
+func (nuo *NodeUpdateOne) Where(ps ...predicate.Node) *NodeUpdateOne {
+	nuo.mutation.Where(ps...)
+	return nuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne {
@@ -358,7 +368,7 @@ func (nuo *NodeUpdateOne) Select(field string, fields ...string) *NodeUpdateOne 
 
 // Save executes the query and returns the updated Node entity.
 func (nuo *NodeUpdateOne) Save(ctx context.Context) (*Node, error) {
-	return withHooks[*Node, NodeMutation](ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
+	return withHooks(ctx, nuo.sqlSave, nuo.mutation, nuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -384,16 +394,7 @@ func (nuo *NodeUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   node.Table,
-			Columns: node.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: node.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(node.Table, node.Columns, sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt))
 	id, ok := nuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Node.id" for update`)}
@@ -432,10 +433,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -448,10 +446,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.ParentColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -467,10 +462,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -483,10 +475,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -502,10 +491,7 @@ func (nuo *NodeUpdateOne) sqlSave(ctx context.Context) (_node *Node, err error) 
 			Columns: []string{node.ChildrenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: node.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(node.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

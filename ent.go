@@ -239,7 +239,7 @@ func (Schema) Policy() Policy { return nil }
 func (Schema) Annotations() []schema.Annotation { return nil }
 
 type (
-	// Value represents a value returned by ent.
+	// Value represents a dynamic value returned by mutations or queries.
 	Value any
 
 	// Mutation represents an operation that mutate the graph.
@@ -328,7 +328,14 @@ type (
 
 	// Mutator is the interface that wraps the Mutate method.
 	Mutator interface {
-		// Mutate apply the given mutation on the graph.
+		// Mutate apply the given mutation on the graph. The returned
+		// ent.Value is changing according to the mutation operation:
+		//
+		// OpCreate, the returned value is the created node (T).
+		// OpUpdateOne, the returned value is the updated node (T).
+		// OpUpdate, the returned value is the amount of updated nodes (int).
+		// OpDeleteOne, OpDelete, the returned value is the amount of deleted nodes (int).
+		//
 		Mutate(context.Context, Mutation) (Value, error)
 	}
 
@@ -473,8 +480,21 @@ type (
 	// QueryContext contains additional information about
 	// the context in which the query is executed.
 	QueryContext struct {
-		Op   string // operation name
-		Type string // type name
+		// Op defines the operation name. e.g., First, All, Count, etc.
+		Op string
+		// Type defines the query type as defined in the generated code.
+		Type string
+		// Unique indicates if the Unique modifier was set on the query and
+		// its value. Calling Unique(false) sets the value of Unique to false.
+		Unique *bool
+		// Limit indicates if the Limit modifier was set on the query and
+		// its value. Calling Limit(10) sets the value of Limit to 10.
+		Limit *int
+		// Offset indicates if the Offset modifier was set on the query and
+		// its value. Calling Offset(10) sets the value of Offset to 10.
+		Offset *int
+		// Fields specifies the fields that were selected in the query.
+		Fields []string
 	}
 	queryCtxKey struct{}
 )
@@ -488,4 +508,37 @@ func NewQueryContext(parent context.Context, c *QueryContext) context.Context {
 func QueryFromContext(ctx context.Context) *QueryContext {
 	c, _ := ctx.Value(queryCtxKey{}).(*QueryContext)
 	return c
+}
+
+// Clone returns a deep copy of the query context.
+func (q *QueryContext) Clone() *QueryContext {
+	c := &QueryContext{
+		Op:     q.Op,
+		Type:   q.Type,
+		Fields: append([]string(nil), q.Fields...),
+	}
+	if q.Unique != nil {
+		v := *q.Unique
+		c.Unique = &v
+	}
+	if q.Limit != nil {
+		v := *q.Limit
+		c.Limit = &v
+	}
+	if q.Offset != nil {
+		v := *q.Offset
+		c.Offset = &v
+	}
+	return c
+}
+
+// AppendFieldOnce adds the given field to the spec if it is not already present.
+func (q *QueryContext) AppendFieldOnce(f string) *QueryContext {
+	for _, f1 := range q.Fields {
+		if f == f1 {
+			return q
+		}
+	}
+	q.Fields = append(q.Fields, f)
+	return q
 }

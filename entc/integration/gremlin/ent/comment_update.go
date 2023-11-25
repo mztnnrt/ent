@@ -41,6 +41,14 @@ func (cu *CommentUpdate) SetUniqueInt(i int) *CommentUpdate {
 	return cu
 }
 
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (cu *CommentUpdate) SetNillableUniqueInt(i *int) *CommentUpdate {
+	if i != nil {
+		cu.SetUniqueInt(*i)
+	}
+	return cu
+}
+
 // AddUniqueInt adds i to the "unique_int" field.
 func (cu *CommentUpdate) AddUniqueInt(i int) *CommentUpdate {
 	cu.mutation.AddUniqueInt(i)
@@ -51,6 +59,14 @@ func (cu *CommentUpdate) AddUniqueInt(i int) *CommentUpdate {
 func (cu *CommentUpdate) SetUniqueFloat(f float64) *CommentUpdate {
 	cu.mutation.ResetUniqueFloat()
 	cu.mutation.SetUniqueFloat(f)
+	return cu
+}
+
+// SetNillableUniqueFloat sets the "unique_float" field if the given value is not nil.
+func (cu *CommentUpdate) SetNillableUniqueFloat(f *float64) *CommentUpdate {
+	if f != nil {
+		cu.SetUniqueFloat(*f)
+	}
 	return cu
 }
 
@@ -154,7 +170,7 @@ func (cu *CommentUpdate) Mutation() *CommentMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CommentUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CommentMutation](ctx, cu.gremlinSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.gremlinSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -299,6 +315,14 @@ func (cuo *CommentUpdateOne) SetUniqueInt(i int) *CommentUpdateOne {
 	return cuo
 }
 
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (cuo *CommentUpdateOne) SetNillableUniqueInt(i *int) *CommentUpdateOne {
+	if i != nil {
+		cuo.SetUniqueInt(*i)
+	}
+	return cuo
+}
+
 // AddUniqueInt adds i to the "unique_int" field.
 func (cuo *CommentUpdateOne) AddUniqueInt(i int) *CommentUpdateOne {
 	cuo.mutation.AddUniqueInt(i)
@@ -309,6 +333,14 @@ func (cuo *CommentUpdateOne) AddUniqueInt(i int) *CommentUpdateOne {
 func (cuo *CommentUpdateOne) SetUniqueFloat(f float64) *CommentUpdateOne {
 	cuo.mutation.ResetUniqueFloat()
 	cuo.mutation.SetUniqueFloat(f)
+	return cuo
+}
+
+// SetNillableUniqueFloat sets the "unique_float" field if the given value is not nil.
+func (cuo *CommentUpdateOne) SetNillableUniqueFloat(f *float64) *CommentUpdateOne {
+	if f != nil {
+		cuo.SetUniqueFloat(*f)
+	}
 	return cuo
 }
 
@@ -410,6 +442,12 @@ func (cuo *CommentUpdateOne) Mutation() *CommentMutation {
 	return cuo.mutation
 }
 
+// Where appends a list predicates to the CommentUpdate builder.
+func (cuo *CommentUpdateOne) Where(ps ...predicate.Comment) *CommentUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *CommentUpdateOne) Select(field string, fields ...string) *CommentUpdateOne {
@@ -419,7 +457,7 @@ func (cuo *CommentUpdateOne) Select(field string, fields ...string) *CommentUpda
 
 // Save executes the query and returns the updated Comment entity.
 func (cuo *CommentUpdateOne) Save(ctx context.Context) (*Comment, error) {
-	return withHooks[*Comment, CommentMutation](ctx, cuo.gremlinSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.gremlinSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

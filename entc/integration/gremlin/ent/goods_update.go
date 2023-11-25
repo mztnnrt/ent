@@ -37,7 +37,7 @@ func (gu *GoodsUpdate) Mutation() *GoodsMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gu *GoodsUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, GoodsMutation](ctx, gu.gremlinSave, gu.mutation, gu.hooks)
+	return withHooks(ctx, gu.gremlinSave, gu.mutation, gu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -101,6 +101,12 @@ func (guo *GoodsUpdateOne) Mutation() *GoodsMutation {
 	return guo.mutation
 }
 
+// Where appends a list predicates to the GoodsUpdate builder.
+func (guo *GoodsUpdateOne) Where(ps ...predicate.Goods) *GoodsUpdateOne {
+	guo.mutation.Where(ps...)
+	return guo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (guo *GoodsUpdateOne) Select(field string, fields ...string) *GoodsUpdateOne {
@@ -110,7 +116,7 @@ func (guo *GoodsUpdateOne) Select(field string, fields ...string) *GoodsUpdateOn
 
 // Save executes the query and returns the updated Goods entity.
 func (guo *GoodsUpdateOne) Save(ctx context.Context) (*Goods, error) {
-	return withHooks[*Goods, GoodsMutation](ctx, guo.gremlinSave, guo.mutation, guo.hooks)
+	return withHooks(ctx, guo.gremlinSave, guo.mutation, guo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

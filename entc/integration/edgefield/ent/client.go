@@ -11,10 +11,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 
+	"entgo.io/ent"
 	"entgo.io/ent/entc/integration/edgefield/ent/migrate"
 	"github.com/google/uuid"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/entc/integration/edgefield/ent/car"
 	"entgo.io/ent/entc/integration/edgefield/ent/card"
 	"entgo.io/ent/entc/integration/edgefield/ent/info"
@@ -24,10 +29,6 @@ import (
 	"entgo.io/ent/entc/integration/edgefield/ent/post"
 	"entgo.io/ent/entc/integration/edgefield/ent/rental"
 	"entgo.io/ent/entc/integration/edgefield/ent/user"
-
-	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // Client is the client that holds all ent builders.
@@ -57,9 +58,7 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
-	cfg.options(opts...)
-	client := &Client{config: cfg}
+	client := &Client{config: newConfig(opts...)}
 	client.init()
 	return client
 }
@@ -75,6 +74,62 @@ func (c *Client) init() {
 	c.Post = NewPostClient(c.config)
 	c.Rental = NewRentalClient(c.config)
 	c.User = NewUserClient(c.config)
+}
+
+type (
+	// config is the configuration for the client and its builder.
+	config struct {
+		// driver used for executing database requests.
+		driver dialect.Driver
+		// debug enable a debug logging.
+		debug bool
+		// log used for logging on debug mode.
+		log func(...any)
+		// hooks to execute on mutations.
+		hooks *hooks
+		// interceptors to execute on queries.
+		inters *inters
+	}
+	// Option function to configure the client.
+	Option func(*config)
+)
+
+// newConfig creates a new config for the client.
+func newConfig(opts ...Option) config {
+	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
+	cfg.options(opts...)
+	return cfg
+}
+
+// options applies the options on the config object.
+func (c *config) options(opts ...Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.debug {
+		c.driver = dialect.Debug(c.driver, c.log)
+	}
+}
+
+// Debug enables debug logging on the ent.Driver.
+func Debug() Option {
+	return func(c *config) {
+		c.debug = true
+	}
+}
+
+// Log sets the logging function for debug mode.
+func Log(fn func(...any)) Option {
+	return func(c *config) {
+		c.log = fn
+	}
+}
+
+// Driver configures the client driver.
+func Driver(driver dialect.Driver) Option {
+	return func(c *config) {
+		c.driver = driver
+	}
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -93,11 +148,14 @@ func Open(driverName, dataSourceName string, options ...Option) (*Client, error)
 	}
 }
 
+// ErrTxStarted is returned when trying to start a new transaction from a transactional client.
+var ErrTxStarted = errors.New("ent: cannot start a transaction within a transaction")
+
 // Tx returns a new transactional client. The provided context
 // is used until the transaction is committed or rolled back.
 func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	if _, ok := c.driver.(*txDriver); ok {
-		return nil, errors.New("ent: cannot start a transaction within a transaction")
+		return nil, ErrTxStarted
 	}
 	tx, err := newTx(ctx, c.driver)
 	if err != nil {
@@ -173,29 +231,21 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Car.Use(hooks...)
-	c.Card.Use(hooks...)
-	c.Info.Use(hooks...)
-	c.Metadata.Use(hooks...)
-	c.Node.Use(hooks...)
-	c.Pet.Use(hooks...)
-	c.Post.Use(hooks...)
-	c.Rental.Use(hooks...)
-	c.User.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.Car, c.Card, c.Info, c.Metadata, c.Node, c.Pet, c.Post, c.Rental, c.User,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Car.Intercept(interceptors...)
-	c.Card.Intercept(interceptors...)
-	c.Info.Intercept(interceptors...)
-	c.Metadata.Intercept(interceptors...)
-	c.Node.Intercept(interceptors...)
-	c.Pet.Intercept(interceptors...)
-	c.Post.Intercept(interceptors...)
-	c.Rental.Intercept(interceptors...)
-	c.User.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.Car, c.Card, c.Info, c.Metadata, c.Node, c.Pet, c.Post, c.Rental, c.User,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -240,7 +290,7 @@ func (c *CarClient) Use(hooks ...Hook) {
 	c.hooks.Car = append(c.hooks.Car, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `car.Intercept(f(g(h())))`.
 func (c *CarClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Car = append(c.inters.Car, interceptors...)
@@ -254,6 +304,21 @@ func (c *CarClient) Create() *CarCreate {
 
 // CreateBulk returns a builder for creating a bulk of Car entities.
 func (c *CarClient) CreateBulk(builders ...*CarCreate) *CarCreateBulk {
+	return &CarCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CarClient) MapCreateBulk(slice any, setFunc func(*CarCreate, int)) *CarCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CarCreateBulk{err: fmt.Errorf("calling to CarClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CarCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &CarCreateBulk{config: c.config, builders: builders}
 }
 
@@ -298,6 +363,7 @@ func (c *CarClient) DeleteOneID(id uuid.UUID) *CarDeleteOne {
 func (c *CarClient) Query() *CarQuery {
 	return &CarQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeCar},
 		inters: c.Interceptors(),
 	}
 }
@@ -373,7 +439,7 @@ func (c *CardClient) Use(hooks ...Hook) {
 	c.hooks.Card = append(c.hooks.Card, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `card.Intercept(f(g(h())))`.
 func (c *CardClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Card = append(c.inters.Card, interceptors...)
@@ -387,6 +453,21 @@ func (c *CardClient) Create() *CardCreate {
 
 // CreateBulk returns a builder for creating a bulk of Card entities.
 func (c *CardClient) CreateBulk(builders ...*CardCreate) *CardCreateBulk {
+	return &CardCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CardClient) MapCreateBulk(slice any, setFunc func(*CardCreate, int)) *CardCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CardCreateBulk{err: fmt.Errorf("calling to CardClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CardCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &CardCreateBulk{config: c.config, builders: builders}
 }
 
@@ -431,6 +512,7 @@ func (c *CardClient) DeleteOneID(id int) *CardDeleteOne {
 func (c *CardClient) Query() *CardQuery {
 	return &CardQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeCard},
 		inters: c.Interceptors(),
 	}
 }
@@ -506,7 +588,7 @@ func (c *InfoClient) Use(hooks ...Hook) {
 	c.hooks.Info = append(c.hooks.Info, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `info.Intercept(f(g(h())))`.
 func (c *InfoClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Info = append(c.inters.Info, interceptors...)
@@ -520,6 +602,21 @@ func (c *InfoClient) Create() *InfoCreate {
 
 // CreateBulk returns a builder for creating a bulk of Info entities.
 func (c *InfoClient) CreateBulk(builders ...*InfoCreate) *InfoCreateBulk {
+	return &InfoCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *InfoClient) MapCreateBulk(slice any, setFunc func(*InfoCreate, int)) *InfoCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &InfoCreateBulk{err: fmt.Errorf("calling to InfoClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*InfoCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &InfoCreateBulk{config: c.config, builders: builders}
 }
 
@@ -564,6 +661,7 @@ func (c *InfoClient) DeleteOneID(id int) *InfoDeleteOne {
 func (c *InfoClient) Query() *InfoQuery {
 	return &InfoQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeInfo},
 		inters: c.Interceptors(),
 	}
 }
@@ -639,7 +737,7 @@ func (c *MetadataClient) Use(hooks ...Hook) {
 	c.hooks.Metadata = append(c.hooks.Metadata, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `metadata.Intercept(f(g(h())))`.
 func (c *MetadataClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Metadata = append(c.inters.Metadata, interceptors...)
@@ -653,6 +751,21 @@ func (c *MetadataClient) Create() *MetadataCreate {
 
 // CreateBulk returns a builder for creating a bulk of Metadata entities.
 func (c *MetadataClient) CreateBulk(builders ...*MetadataCreate) *MetadataCreateBulk {
+	return &MetadataCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MetadataClient) MapCreateBulk(slice any, setFunc func(*MetadataCreate, int)) *MetadataCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MetadataCreateBulk{err: fmt.Errorf("calling to MetadataClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MetadataCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &MetadataCreateBulk{config: c.config, builders: builders}
 }
 
@@ -697,6 +810,7 @@ func (c *MetadataClient) DeleteOneID(id int) *MetadataDeleteOne {
 func (c *MetadataClient) Query() *MetadataQuery {
 	return &MetadataQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeMetadata},
 		inters: c.Interceptors(),
 	}
 }
@@ -804,7 +918,7 @@ func (c *NodeClient) Use(hooks ...Hook) {
 	c.hooks.Node = append(c.hooks.Node, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `node.Intercept(f(g(h())))`.
 func (c *NodeClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Node = append(c.inters.Node, interceptors...)
@@ -818,6 +932,21 @@ func (c *NodeClient) Create() *NodeCreate {
 
 // CreateBulk returns a builder for creating a bulk of Node entities.
 func (c *NodeClient) CreateBulk(builders ...*NodeCreate) *NodeCreateBulk {
+	return &NodeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *NodeClient) MapCreateBulk(slice any, setFunc func(*NodeCreate, int)) *NodeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &NodeCreateBulk{err: fmt.Errorf("calling to NodeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*NodeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &NodeCreateBulk{config: c.config, builders: builders}
 }
 
@@ -862,6 +991,7 @@ func (c *NodeClient) DeleteOneID(id int) *NodeDeleteOne {
 func (c *NodeClient) Query() *NodeQuery {
 	return &NodeQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeNode},
 		inters: c.Interceptors(),
 	}
 }
@@ -953,7 +1083,7 @@ func (c *PetClient) Use(hooks ...Hook) {
 	c.hooks.Pet = append(c.hooks.Pet, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `pet.Intercept(f(g(h())))`.
 func (c *PetClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Pet = append(c.inters.Pet, interceptors...)
@@ -967,6 +1097,21 @@ func (c *PetClient) Create() *PetCreate {
 
 // CreateBulk returns a builder for creating a bulk of Pet entities.
 func (c *PetClient) CreateBulk(builders ...*PetCreate) *PetCreateBulk {
+	return &PetCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PetClient) MapCreateBulk(slice any, setFunc func(*PetCreate, int)) *PetCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PetCreateBulk{err: fmt.Errorf("calling to PetClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PetCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &PetCreateBulk{config: c.config, builders: builders}
 }
 
@@ -1011,6 +1156,7 @@ func (c *PetClient) DeleteOneID(id int) *PetDeleteOne {
 func (c *PetClient) Query() *PetQuery {
 	return &PetQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypePet},
 		inters: c.Interceptors(),
 	}
 }
@@ -1086,7 +1232,7 @@ func (c *PostClient) Use(hooks ...Hook) {
 	c.hooks.Post = append(c.hooks.Post, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `post.Intercept(f(g(h())))`.
 func (c *PostClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Post = append(c.inters.Post, interceptors...)
@@ -1100,6 +1246,21 @@ func (c *PostClient) Create() *PostCreate {
 
 // CreateBulk returns a builder for creating a bulk of Post entities.
 func (c *PostClient) CreateBulk(builders ...*PostCreate) *PostCreateBulk {
+	return &PostCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PostClient) MapCreateBulk(slice any, setFunc func(*PostCreate, int)) *PostCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PostCreateBulk{err: fmt.Errorf("calling to PostClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PostCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &PostCreateBulk{config: c.config, builders: builders}
 }
 
@@ -1144,6 +1305,7 @@ func (c *PostClient) DeleteOneID(id int) *PostDeleteOne {
 func (c *PostClient) Query() *PostQuery {
 	return &PostQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypePost},
 		inters: c.Interceptors(),
 	}
 }
@@ -1219,7 +1381,7 @@ func (c *RentalClient) Use(hooks ...Hook) {
 	c.hooks.Rental = append(c.hooks.Rental, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `rental.Intercept(f(g(h())))`.
 func (c *RentalClient) Intercept(interceptors ...Interceptor) {
 	c.inters.Rental = append(c.inters.Rental, interceptors...)
@@ -1233,6 +1395,21 @@ func (c *RentalClient) Create() *RentalCreate {
 
 // CreateBulk returns a builder for creating a bulk of Rental entities.
 func (c *RentalClient) CreateBulk(builders ...*RentalCreate) *RentalCreateBulk {
+	return &RentalCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RentalClient) MapCreateBulk(slice any, setFunc func(*RentalCreate, int)) *RentalCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RentalCreateBulk{err: fmt.Errorf("calling to RentalClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RentalCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &RentalCreateBulk{config: c.config, builders: builders}
 }
 
@@ -1277,6 +1454,7 @@ func (c *RentalClient) DeleteOneID(id int) *RentalDeleteOne {
 func (c *RentalClient) Query() *RentalQuery {
 	return &RentalQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeRental},
 		inters: c.Interceptors(),
 	}
 }
@@ -1368,7 +1546,7 @@ func (c *UserClient) Use(hooks ...Hook) {
 	c.hooks.User = append(c.hooks.User, hooks...)
 }
 
-// Use adds a list of query interceptors to the interceptors stack.
+// Intercept adds a list of query interceptors to the interceptors stack.
 // A call to `Intercept(f, g, h)` equals to `user.Intercept(f(g(h())))`.
 func (c *UserClient) Intercept(interceptors ...Interceptor) {
 	c.inters.User = append(c.inters.User, interceptors...)
@@ -1382,6 +1560,21 @@ func (c *UserClient) Create() *UserCreate {
 
 // CreateBulk returns a builder for creating a bulk of User entities.
 func (c *UserClient) CreateBulk(builders ...*UserCreate) *UserCreateBulk {
+	return &UserCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserClient) MapCreateBulk(slice any, setFunc func(*UserCreate, int)) *UserCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserCreateBulk{err: fmt.Errorf("calling to UserClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &UserCreateBulk{config: c.config, builders: builders}
 }
 
@@ -1426,6 +1619,7 @@ func (c *UserClient) DeleteOneID(id int) *UserDeleteOne {
 func (c *UserClient) Query() *UserQuery {
 	return &UserQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeUser},
 		inters: c.Interceptors(),
 	}
 }
@@ -1596,3 +1790,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 		return nil, fmt.Errorf("ent: unknown User mutation op: %q", m.Op())
 	}
 }
+
+// hooks and interceptors per client, for fast access.
+type (
+	hooks struct {
+		Car, Card, Info, Metadata, Node, Pet, Post, Rental, User []ent.Hook
+	}
+	inters struct {
+		Car, Card, Info, Metadata, Node, Pet, Post, Rental, User []ent.Interceptor
+	}
+)

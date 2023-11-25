@@ -62,6 +62,11 @@ func Value(v int) predicate.Node {
 	return predicate.Node(sql.FieldEQ(FieldValue, v))
 }
 
+// ParentID applies equality check predicate on the "parent_id" field. It's identical to ParentIDEQ.
+func ParentID(v int) predicate.Node {
+	return predicate.Node(sql.FieldEQ(FieldParentID, v))
+}
+
 // ValueEQ applies the EQ predicate on the "value" field.
 func ValueEQ(v int) predicate.Node {
 	return predicate.Node(sql.FieldEQ(FieldValue, v))
@@ -102,6 +107,36 @@ func ValueLTE(v int) predicate.Node {
 	return predicate.Node(sql.FieldLTE(FieldValue, v))
 }
 
+// ParentIDEQ applies the EQ predicate on the "parent_id" field.
+func ParentIDEQ(v int) predicate.Node {
+	return predicate.Node(sql.FieldEQ(FieldParentID, v))
+}
+
+// ParentIDNEQ applies the NEQ predicate on the "parent_id" field.
+func ParentIDNEQ(v int) predicate.Node {
+	return predicate.Node(sql.FieldNEQ(FieldParentID, v))
+}
+
+// ParentIDIn applies the In predicate on the "parent_id" field.
+func ParentIDIn(vs ...int) predicate.Node {
+	return predicate.Node(sql.FieldIn(FieldParentID, vs...))
+}
+
+// ParentIDNotIn applies the NotIn predicate on the "parent_id" field.
+func ParentIDNotIn(vs ...int) predicate.Node {
+	return predicate.Node(sql.FieldNotIn(FieldParentID, vs...))
+}
+
+// ParentIDIsNil applies the IsNil predicate on the "parent_id" field.
+func ParentIDIsNil() predicate.Node {
+	return predicate.Node(sql.FieldIsNull(FieldParentID))
+}
+
+// ParentIDNotNil applies the NotNil predicate on the "parent_id" field.
+func ParentIDNotNil() predicate.Node {
+	return predicate.Node(sql.FieldNotNull(FieldParentID))
+}
+
 // HasParent applies the HasEdge predicate on the "parent" edge.
 func HasParent() predicate.Node {
 	return predicate.Node(func(s *sql.Selector) {
@@ -116,11 +151,7 @@ func HasParent() predicate.Node {
 // HasParentWith applies the HasEdge predicate on the "parent" edge with a given conditions (other predicates).
 func HasParentWith(preds ...predicate.Node) predicate.Node {
 	return predicate.Node(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
-		)
+		step := newParentStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -143,11 +174,7 @@ func HasChildren() predicate.Node {
 // HasChildrenWith applies the HasEdge predicate on the "children" edge with a given conditions (other predicates).
 func HasChildrenWith(preds ...predicate.Node) predicate.Node {
 	return predicate.Node(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ChildrenTable, ChildrenColumn),
-		)
+		step := newChildrenStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -158,32 +185,15 @@ func HasChildrenWith(preds ...predicate.Node) predicate.Node {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Node(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Node(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Node) predicate.Node {
-	return predicate.Node(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Node(sql.NotPredicates(p))
 }

@@ -72,7 +72,7 @@ func (utc *UserTweetCreate) Mutation() *UserTweetMutation {
 // Save creates the UserTweet in the database.
 func (utc *UserTweetCreate) Save(ctx context.Context) (*UserTweet, error) {
 	utc.defaults()
-	return withHooks[*UserTweet, UserTweetMutation](ctx, utc.sqlSave, utc.mutation, utc.hooks)
+	return withHooks(ctx, utc.sqlSave, utc.mutation, utc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -146,13 +146,7 @@ func (utc *UserTweetCreate) sqlSave(ctx context.Context) (*UserTweet, error) {
 func (utc *UserTweetCreate) createSpec() (*UserTweet, *sqlgraph.CreateSpec) {
 	var (
 		_node = &UserTweet{config: utc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: usertweet.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: usertweet.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(usertweet.Table, sqlgraph.NewFieldSpec(usertweet.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = utc.conflict
 	if value, ok := utc.mutation.CreatedAt(); ok {
@@ -167,10 +161,7 @@ func (utc *UserTweetCreate) createSpec() (*UserTweet, *sqlgraph.CreateSpec) {
 			Columns: []string{usertweet.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -187,10 +178,7 @@ func (utc *UserTweetCreate) createSpec() (*UserTweet, *sqlgraph.CreateSpec) {
 			Columns: []string{usertweet.TweetColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tweet.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(tweet.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -405,12 +393,16 @@ func (u *UserTweetUpsertOne) IDX(ctx context.Context) int {
 // UserTweetCreateBulk is the builder for creating many UserTweet entities in bulk.
 type UserTweetCreateBulk struct {
 	config
+	err      error
 	builders []*UserTweetCreate
 	conflict []sql.ConflictOption
 }
 
 // Save creates the UserTweet entities in the database.
 func (utcb *UserTweetCreateBulk) Save(ctx context.Context) ([]*UserTweet, error) {
+	if utcb.err != nil {
+		return nil, utcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(utcb.builders))
 	nodes := make([]*UserTweet, len(utcb.builders))
 	mutators := make([]Mutator, len(utcb.builders))
@@ -427,8 +419,8 @@ func (utcb *UserTweetCreateBulk) Save(ctx context.Context) ([]*UserTweet, error)
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, utcb.builders[i+1].mutation)
 				} else {
@@ -613,6 +605,9 @@ func (u *UserTweetUpsertBulk) UpdateTweetID() *UserTweetUpsertBulk {
 
 // Exec executes the query.
 func (u *UserTweetUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
 			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the UserTweetCreateBulk instead", i)

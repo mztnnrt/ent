@@ -66,7 +66,7 @@ func (lc *LicenseCreate) Mutation() *LicenseMutation {
 // Save creates the License in the database.
 func (lc *LicenseCreate) Save(ctx context.Context) (*License, error) {
 	lc.defaults()
-	return withHooks[*License, LicenseMutation](ctx, lc.gremlinSave, lc.mutation, lc.hooks)
+	return withHooks(ctx, lc.gremlinSave, lc.mutation, lc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -126,13 +126,13 @@ func (lc *LicenseCreate) gremlinSave(ctx context.Context) (*License, error) {
 	if err, ok := isConstantError(res); ok {
 		return nil, err
 	}
-	l := &License{config: lc.config}
-	if err := l.FromResponse(res); err != nil {
+	rnode := &License{config: lc.config}
+	if err := rnode.FromResponse(res); err != nil {
 		return nil, err
 	}
-	lc.mutation.id = &l.ID
+	lc.mutation.id = &rnode.ID
 	lc.mutation.done = true
-	return l, nil
+	return rnode, nil
 }
 
 func (lc *LicenseCreate) gremlin() *dsl.Traversal {
@@ -152,5 +152,6 @@ func (lc *LicenseCreate) gremlin() *dsl.Traversal {
 // LicenseCreateBulk is the builder for creating many License entities in bulk.
 type LicenseCreateBulk struct {
 	config
+	err      error
 	builders []*LicenseCreate
 }

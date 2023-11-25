@@ -31,7 +31,7 @@ func (gtd *GroupTagDelete) Where(ps ...predicate.GroupTag) *GroupTagDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (gtd *GroupTagDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, GroupTagMutation](ctx, gtd.sqlExec, gtd.mutation, gtd.hooks)
+	return withHooks(ctx, gtd.sqlExec, gtd.mutation, gtd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (gtd *GroupTagDelete) ExecX(ctx context.Context) int {
 }
 
 func (gtd *GroupTagDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: grouptag.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: grouptag.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(grouptag.Table, sqlgraph.NewFieldSpec(grouptag.FieldID, field.TypeInt))
 	if ps := gtd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type GroupTagDeleteOne struct {
 	gtd *GroupTagDelete
 }
 
+// Where appends a list predicates to the GroupTagDelete builder.
+func (gtdo *GroupTagDeleteOne) Where(ps ...predicate.GroupTag) *GroupTagDeleteOne {
+	gtdo.gtd.mutation.Where(ps...)
+	return gtdo
+}
+
 // Exec executes the deletion query.
 func (gtdo *GroupTagDeleteOne) Exec(ctx context.Context) error {
 	n, err := gtdo.gtd.Exec(ctx)
@@ -88,5 +86,7 @@ func (gtdo *GroupTagDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gtdo *GroupTagDeleteOne) ExecX(ctx context.Context) {
-	gtdo.gtd.ExecX(ctx)
+	if err := gtdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

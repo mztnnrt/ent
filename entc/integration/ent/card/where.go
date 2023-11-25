@@ -358,11 +358,7 @@ func HasOwner() predicate.Card {
 // HasOwnerWith applies the HasEdge predicate on the "owner" edge with a given conditions (other predicates).
 func HasOwnerWith(preds ...predicate.User) predicate.Card {
 	return predicate.Card(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(OwnerInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, OwnerTable, OwnerColumn),
-		)
+		step := newOwnerStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -385,11 +381,7 @@ func HasSpec() predicate.Card {
 // HasSpecWith applies the HasEdge predicate on the "spec" edge with a given conditions (other predicates).
 func HasSpecWith(preds ...predicate.Spec) predicate.Card {
 	return predicate.Card(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SpecInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, SpecTable, SpecPrimaryKey...),
-		)
+		step := newSpecStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -400,32 +392,15 @@ func HasSpecWith(preds ...predicate.Spec) predicate.Card {
 
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Card) predicate.Card {
-	return predicate.Card(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for _, p := range predicates {
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Card(sql.AndPredicates(predicates...))
 }
 
 // Or groups predicates with the OR operator between them.
 func Or(predicates ...predicate.Card) predicate.Card {
-	return predicate.Card(func(s *sql.Selector) {
-		s1 := s.Clone().SetP(nil)
-		for i, p := range predicates {
-			if i > 0 {
-				s1.Or()
-			}
-			p(s1)
-		}
-		s.Where(s1.P())
-	})
+	return predicate.Card(sql.OrPredicates(predicates...))
 }
 
 // Not applies the not operator on the given predicate.
 func Not(p predicate.Card) predicate.Card {
-	return predicate.Card(func(s *sql.Selector) {
-		p(s.Not())
-	})
+	return predicate.Card(sql.NotPredicates(p))
 }

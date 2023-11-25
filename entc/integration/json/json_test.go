@@ -48,12 +48,17 @@ func TestMySQL(t *testing.T) {
 			Floats(t, client)
 			NetAddr(t, client)
 			RawMessage(t, client)
+			Any(t, client)
 			// Skip tests with JSON functions for old MySQL versions.
 			if version != "56" {
 				URLs(t, client)
 				Ints(t, client)
 				Strings(t, client)
+				IntsValidate(t, client)
+				FloatsValidate(t, client)
+				StringsValidate(t, client)
 				Predicates(t, client)
+				Order(t, client)
 			}
 			Scan(t, client)
 		})
@@ -84,10 +89,15 @@ func TestMaria(t *testing.T) {
 			Ints(t, client)
 			Floats(t, client)
 			Strings(t, client)
+			IntsValidate(t, client)
+			FloatsValidate(t, client)
+			StringsValidate(t, client)
 			NetAddr(t, client)
 			RawMessage(t, client)
+			Any(t, client)
 			Predicates(t, client)
 			Scan(t, client)
+			Order(t, client)
 		})
 	}
 }
@@ -116,10 +126,15 @@ func TestPostgres(t *testing.T) {
 			Ints(t, client)
 			Floats(t, client)
 			Strings(t, client)
+			IntsValidate(t, client)
+			FloatsValidate(t, client)
+			StringsValidate(t, client)
 			NetAddr(t, client)
 			RawMessage(t, client)
+			Any(t, client)
 			Predicates(t, client)
 			Scan(t, client)
+			Order(t, client)
 		})
 	}
 }
@@ -137,10 +152,15 @@ func TestSQLite(t *testing.T) {
 	Ints(t, client)
 	Floats(t, client)
 	Strings(t, client)
+	IntsValidate(t, client)
+	FloatsValidate(t, client)
+	StringsValidate(t, client)
 	NetAddr(t, client)
 	RawMessage(t, client)
+	Any(t, client)
 	Predicates(t, client)
 	Scan(t, client)
+	Order(t, client)
 }
 
 func Ints(t *testing.T, client *ent.Client) {
@@ -164,6 +184,15 @@ func Ints(t *testing.T, client *ent.Client) {
 	require.Equal(t, []int{1, 2, 3, 4, 5, 6}, usr.Ints)
 }
 
+func IntsValidate(t *testing.T, client *ent.Client) {
+	ctx := context.Background()
+	xs := []int{1, 2, 3}
+	err := client.User.Create().SetIntsValidate(xs).Exec(ctx)
+	require.ErrorIs(t, err, schema.ErrValidate)
+	err = client.User.Create().Exec(ctx)
+	require.NoError(t, err, schema.ErrValidate)
+}
+
 func Floats(t *testing.T, client *ent.Client) {
 	ctx := context.Background()
 	flts := []float64{1, 2, 3}
@@ -176,6 +205,15 @@ func Floats(t *testing.T, client *ent.Client) {
 	usr = usr.Update().ClearFloats().SaveX(ctx)
 	require.Empty(t, usr.Floats)
 	require.Empty(t, client.User.GetX(ctx, usr.ID).Floats)
+}
+
+func FloatsValidate(t *testing.T, client *ent.Client) {
+	ctx := context.Background()
+	xs := []float64{1, 2, 3}
+	err := client.User.Create().SetFloatsValidate(xs).Exec(ctx)
+	require.ErrorIs(t, err, schema.ErrValidate)
+	err = client.User.Create().Exec(ctx)
+	require.NoError(t, err, schema.ErrValidate)
 }
 
 func Strings(t *testing.T, client *ent.Client) {
@@ -259,6 +297,24 @@ func Strings(t *testing.T, client *ent.Client) {
 		require.Empty(t, usr.Strings)
 		require.Equal(t, []http.Dir{"/etc", "/dev"}, usr.Dirs)
 	})
+}
+
+func StringsValidate(t *testing.T, client *ent.Client) {
+	ctx := context.Background()
+	xs := []string{"a", "b", "c"}
+	err := client.User.Create().SetStringsValidate(xs).Exec(ctx)
+	require.ErrorIs(t, err, schema.ErrValidate)
+	err = client.User.Create().Exec(ctx)
+	require.NoError(t, err, schema.ErrValidate)
+}
+
+func Any(t *testing.T, client *ent.Client) {
+	ctx := context.Background()
+	u := client.User.Create().SetUnknown("string").SaveX(ctx)
+	require.Equal(t, "string", u.Unknown)
+	u = u.Update().SetUnknown([]any{1, 2, 3}).SaveX(ctx)
+	require.Equal(t, []any{1.0, 2.0, 3.0}, u.Unknown)
+	require.Equal(t, []any{1.0, 2.0, 3.0}, client.User.GetX(ctx, u.ID).Unknown)
 }
 
 func RawMessage(t *testing.T, client *ent.Client) {
@@ -599,6 +655,65 @@ func Predicates(t *testing.T, client *ent.Client) {
 		}).CountX(ctx)
 		require.Equal(t, 4, n)
 	})
+
+	t.Run("Boolean", func(t *testing.T) {
+		users := client.User.Query().
+			Where(func(s *sql.Selector) {
+				s.Where(sqljson.ValueEQ(user.FieldT, true, sqljson.Path("b")))
+			}).
+			AllX(ctx)
+		require.Empty(t, users)
+		client.User.Create().SetT(&schema.T{B: true}).ExecX(ctx)
+		u1 := client.User.Query().
+			Where(func(s *sql.Selector) {
+				s.Where(sqljson.ValueEQ(user.FieldT, true, sqljson.Path("b")))
+			}).
+			OnlyX(ctx)
+		require.True(t, u1.T.B)
+	})
+}
+
+func Order(t *testing.T, client *ent.Client) {
+	ctx := context.Background()
+	client.User.Delete().ExecX(ctx)
+	client.User.CreateBulk(
+		client.User.Create().SetT(&schema.T{I: 1, Li: []int{1, 1, 1}}),
+		client.User.Create().SetT(&schema.T{I: 2, Li: []int{2, 2}}),
+		client.User.Create().SetT(&schema.T{I: 3, Li: []int{3}}),
+	).ExecX(ctx)
+
+	users := client.User.Query().
+		Order(
+			sqljson.OrderValue(user.FieldT, sqljson.Path("i")),
+		).
+		// PostgreSQL doesn't support ORDER BY
+		// expressions with SELECT DISTINCT.
+		Unique(false).
+		AllX(ctx)
+	require.Equal(t, 1, users[0].T.I)
+	require.Equal(t, 2, users[1].T.I)
+	require.Equal(t, 3, users[2].T.I)
+
+	users = client.User.Query().
+		Order(
+			sqljson.OrderValueDesc(user.FieldT, sqljson.Path("i")),
+		).
+		Unique(false).
+		AllX(ctx)
+	require.Equal(t, 3, users[0].T.I)
+	require.Equal(t, 2, users[1].T.I)
+	require.Equal(t, 1, users[2].T.I)
+
+	// Order by array length.
+	users = client.User.Query().
+		Order(
+			sqljson.OrderLenDesc(user.FieldT, sqljson.Path("li")),
+		).
+		Unique(false).
+		AllX(ctx)
+	require.Len(t, users[0].T.Li, 3)
+	require.Len(t, users[1].T.Li, 2)
+	require.Len(t, users[2].T.Li, 1)
 }
 
 func Scan(t *testing.T, client *ent.Client) {

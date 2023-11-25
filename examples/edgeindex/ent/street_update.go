@@ -38,6 +38,14 @@ func (su *StreetUpdate) SetName(s string) *StreetUpdate {
 	return su
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (su *StreetUpdate) SetNillableName(s *string) *StreetUpdate {
+	if s != nil {
+		su.SetName(*s)
+	}
+	return su
+}
+
 // SetCityID sets the "city" edge to the City entity by ID.
 func (su *StreetUpdate) SetCityID(id int) *StreetUpdate {
 	su.mutation.SetCityID(id)
@@ -70,7 +78,7 @@ func (su *StreetUpdate) ClearCity() *StreetUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (su *StreetUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, StreetMutation](ctx, su.sqlSave, su.mutation, su.hooks)
+	return withHooks(ctx, su.sqlSave, su.mutation, su.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -96,16 +104,7 @@ func (su *StreetUpdate) ExecX(ctx context.Context) {
 }
 
 func (su *StreetUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   street.Table,
-			Columns: street.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: street.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(street.Table, street.Columns, sqlgraph.NewFieldSpec(street.FieldID, field.TypeInt))
 	if ps := su.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -124,10 +123,7 @@ func (su *StreetUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{street.CityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: city.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -140,10 +136,7 @@ func (su *StreetUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{street.CityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: city.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -177,6 +170,14 @@ func (suo *StreetUpdateOne) SetName(s string) *StreetUpdateOne {
 	return suo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (suo *StreetUpdateOne) SetNillableName(s *string) *StreetUpdateOne {
+	if s != nil {
+		suo.SetName(*s)
+	}
+	return suo
+}
+
 // SetCityID sets the "city" edge to the City entity by ID.
 func (suo *StreetUpdateOne) SetCityID(id int) *StreetUpdateOne {
 	suo.mutation.SetCityID(id)
@@ -207,6 +208,12 @@ func (suo *StreetUpdateOne) ClearCity() *StreetUpdateOne {
 	return suo
 }
 
+// Where appends a list predicates to the StreetUpdate builder.
+func (suo *StreetUpdateOne) Where(ps ...predicate.Street) *StreetUpdateOne {
+	suo.mutation.Where(ps...)
+	return suo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (suo *StreetUpdateOne) Select(field string, fields ...string) *StreetUpdateOne {
@@ -216,7 +223,7 @@ func (suo *StreetUpdateOne) Select(field string, fields ...string) *StreetUpdate
 
 // Save executes the query and returns the updated Street entity.
 func (suo *StreetUpdateOne) Save(ctx context.Context) (*Street, error) {
-	return withHooks[*Street, StreetMutation](ctx, suo.sqlSave, suo.mutation, suo.hooks)
+	return withHooks(ctx, suo.sqlSave, suo.mutation, suo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -242,16 +249,7 @@ func (suo *StreetUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (suo *StreetUpdateOne) sqlSave(ctx context.Context) (_node *Street, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   street.Table,
-			Columns: street.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: street.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(street.Table, street.Columns, sqlgraph.NewFieldSpec(street.FieldID, field.TypeInt))
 	id, ok := suo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Street.id" for update`)}
@@ -287,10 +285,7 @@ func (suo *StreetUpdateOne) sqlSave(ctx context.Context) (_node *Street, err err
 			Columns: []string{street.CityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: city.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -303,10 +298,7 @@ func (suo *StreetUpdateOne) sqlSave(ctx context.Context) (_node *Street, err err
 			Columns: []string{street.CityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: city.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(city.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

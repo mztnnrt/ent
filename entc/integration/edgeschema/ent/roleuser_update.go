@@ -54,9 +54,25 @@ func (ruu *RoleUserUpdate) SetRoleID(i int) *RoleUserUpdate {
 	return ruu
 }
 
+// SetNillableRoleID sets the "role_id" field if the given value is not nil.
+func (ruu *RoleUserUpdate) SetNillableRoleID(i *int) *RoleUserUpdate {
+	if i != nil {
+		ruu.SetRoleID(*i)
+	}
+	return ruu
+}
+
 // SetUserID sets the "user_id" field.
 func (ruu *RoleUserUpdate) SetUserID(i int) *RoleUserUpdate {
 	ruu.mutation.SetUserID(i)
+	return ruu
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (ruu *RoleUserUpdate) SetNillableUserID(i *int) *RoleUserUpdate {
+	if i != nil {
+		ruu.SetUserID(*i)
+	}
 	return ruu
 }
 
@@ -89,7 +105,7 @@ func (ruu *RoleUserUpdate) ClearUser() *RoleUserUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ruu *RoleUserUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, RoleUserMutation](ctx, ruu.sqlSave, ruu.mutation, ruu.hooks)
+	return withHooks(ctx, ruu.sqlSave, ruu.mutation, ruu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -129,22 +145,7 @@ func (ruu *RoleUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ruu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   roleuser.Table,
-			Columns: roleuser.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeInt,
-					Column: roleuser.FieldUserID,
-				},
-				{
-					Type:   field.TypeInt,
-					Column: roleuser.FieldRoleID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(roleuser.Table, roleuser.Columns, sqlgraph.NewFieldSpec(roleuser.FieldUserID, field.TypeInt), sqlgraph.NewFieldSpec(roleuser.FieldRoleID, field.TypeInt))
 	if ps := ruu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -163,10 +164,7 @@ func (ruu *RoleUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{roleuser.RoleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: role.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(role.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -179,10 +177,7 @@ func (ruu *RoleUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{roleuser.RoleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: role.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(role.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -198,10 +193,7 @@ func (ruu *RoleUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{roleuser.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -214,10 +206,7 @@ func (ruu *RoleUserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{roleuser.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -265,9 +254,25 @@ func (ruuo *RoleUserUpdateOne) SetRoleID(i int) *RoleUserUpdateOne {
 	return ruuo
 }
 
+// SetNillableRoleID sets the "role_id" field if the given value is not nil.
+func (ruuo *RoleUserUpdateOne) SetNillableRoleID(i *int) *RoleUserUpdateOne {
+	if i != nil {
+		ruuo.SetRoleID(*i)
+	}
+	return ruuo
+}
+
 // SetUserID sets the "user_id" field.
 func (ruuo *RoleUserUpdateOne) SetUserID(i int) *RoleUserUpdateOne {
 	ruuo.mutation.SetUserID(i)
+	return ruuo
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (ruuo *RoleUserUpdateOne) SetNillableUserID(i *int) *RoleUserUpdateOne {
+	if i != nil {
+		ruuo.SetUserID(*i)
+	}
 	return ruuo
 }
 
@@ -298,6 +303,12 @@ func (ruuo *RoleUserUpdateOne) ClearUser() *RoleUserUpdateOne {
 	return ruuo
 }
 
+// Where appends a list predicates to the RoleUserUpdate builder.
+func (ruuo *RoleUserUpdateOne) Where(ps ...predicate.RoleUser) *RoleUserUpdateOne {
+	ruuo.mutation.Where(ps...)
+	return ruuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruuo *RoleUserUpdateOne) Select(field string, fields ...string) *RoleUserUpdateOne {
@@ -307,7 +318,7 @@ func (ruuo *RoleUserUpdateOne) Select(field string, fields ...string) *RoleUserU
 
 // Save executes the query and returns the updated RoleUser entity.
 func (ruuo *RoleUserUpdateOne) Save(ctx context.Context) (*RoleUser, error) {
-	return withHooks[*RoleUser, RoleUserMutation](ctx, ruuo.sqlSave, ruuo.mutation, ruuo.hooks)
+	return withHooks(ctx, ruuo.sqlSave, ruuo.mutation, ruuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -347,22 +358,7 @@ func (ruuo *RoleUserUpdateOne) sqlSave(ctx context.Context) (_node *RoleUser, er
 	if err := ruuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   roleuser.Table,
-			Columns: roleuser.Columns,
-			CompositeID: []*sqlgraph.FieldSpec{
-				{
-					Type:   field.TypeInt,
-					Column: roleuser.FieldUserID,
-				},
-				{
-					Type:   field.TypeInt,
-					Column: roleuser.FieldRoleID,
-				},
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(roleuser.Table, roleuser.Columns, sqlgraph.NewFieldSpec(roleuser.FieldUserID, field.TypeInt), sqlgraph.NewFieldSpec(roleuser.FieldRoleID, field.TypeInt))
 	if id, ok := ruuo.mutation.UserID(); !ok {
 		return nil, &ValidationError{Name: "user_id", err: errors.New(`ent: missing "RoleUser.user_id" for update`)}
 	} else {
@@ -400,10 +396,7 @@ func (ruuo *RoleUserUpdateOne) sqlSave(ctx context.Context) (_node *RoleUser, er
 			Columns: []string{roleuser.RoleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: role.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(role.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -416,10 +409,7 @@ func (ruuo *RoleUserUpdateOne) sqlSave(ctx context.Context) (_node *RoleUser, er
 			Columns: []string{roleuser.RoleColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: role.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(role.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -435,10 +425,7 @@ func (ruuo *RoleUserUpdateOne) sqlSave(ctx context.Context) (_node *RoleUser, er
 			Columns: []string{roleuser.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -451,10 +438,7 @@ func (ruuo *RoleUserUpdateOne) sqlSave(ctx context.Context) (_node *RoleUser, er
 			Columns: []string{roleuser.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -61,6 +61,14 @@ func (pu *PetUpdate) SetName(s string) *PetUpdate {
 	return pu
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (pu *PetUpdate) SetNillableName(s *string) *PetUpdate {
+	if s != nil {
+		pu.SetName(*s)
+	}
+	return pu
+}
+
 // SetUUID sets the "uuid" field.
 func (pu *PetUpdate) SetUUID(u uuid.UUID) *PetUpdate {
 	pu.mutation.SetUUID(u)
@@ -172,7 +180,7 @@ func (pu *PetUpdate) ClearOwner() *PetUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pu *PetUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, PetMutation](ctx, pu.gremlinSave, pu.mutation, pu.hooks)
+	return withHooks(ctx, pu.gremlinSave, pu.mutation, pu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -322,6 +330,14 @@ func (puo *PetUpdateOne) SetName(s string) *PetUpdateOne {
 	return puo
 }
 
+// SetNillableName sets the "name" field if the given value is not nil.
+func (puo *PetUpdateOne) SetNillableName(s *string) *PetUpdateOne {
+	if s != nil {
+		puo.SetName(*s)
+	}
+	return puo
+}
+
 // SetUUID sets the "uuid" field.
 func (puo *PetUpdateOne) SetUUID(u uuid.UUID) *PetUpdateOne {
 	puo.mutation.SetUUID(u)
@@ -431,6 +447,12 @@ func (puo *PetUpdateOne) ClearOwner() *PetUpdateOne {
 	return puo
 }
 
+// Where appends a list predicates to the PetUpdate builder.
+func (puo *PetUpdateOne) Where(ps ...predicate.Pet) *PetUpdateOne {
+	puo.mutation.Where(ps...)
+	return puo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (puo *PetUpdateOne) Select(field string, fields ...string) *PetUpdateOne {
@@ -440,7 +462,7 @@ func (puo *PetUpdateOne) Select(field string, fields ...string) *PetUpdateOne {
 
 // Save executes the query and returns the updated Pet entity.
 func (puo *PetUpdateOne) Save(ctx context.Context) (*Pet, error) {
-	return withHooks[*Pet, PetMutation](ctx, puo.gremlinSave, puo.mutation, puo.hooks)
+	return withHooks(ctx, puo.gremlinSave, puo.mutation, puo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.

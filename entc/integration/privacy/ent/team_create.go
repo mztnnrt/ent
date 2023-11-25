@@ -68,7 +68,7 @@ func (tc *TeamCreate) Mutation() *TeamMutation {
 
 // Save creates the Team in the database.
 func (tc *TeamCreate) Save(ctx context.Context) (*Team, error) {
-	return withHooks[*Team, TeamMutation](ctx, tc.sqlSave, tc.mutation, tc.hooks)
+	return withHooks(ctx, tc.sqlSave, tc.mutation, tc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -127,13 +127,7 @@ func (tc *TeamCreate) sqlSave(ctx context.Context) (*Team, error) {
 func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Team{config: tc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: team.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: team.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(team.Table, sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt))
 	)
 	if value, ok := tc.mutation.Name(); ok {
 		_spec.SetField(team.FieldName, field.TypeString, value)
@@ -147,10 +141,7 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 			Columns: team.TasksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: task.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -166,10 +157,7 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 			Columns: team.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -183,11 +171,15 @@ func (tc *TeamCreate) createSpec() (*Team, *sqlgraph.CreateSpec) {
 // TeamCreateBulk is the builder for creating many Team entities in bulk.
 type TeamCreateBulk struct {
 	config
+	err      error
 	builders []*TeamCreate
 }
 
 // Save creates the Team entities in the database.
 func (tcb *TeamCreateBulk) Save(ctx context.Context) ([]*Team, error) {
+	if tcb.err != nil {
+		return nil, tcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(tcb.builders))
 	nodes := make([]*Team, len(tcb.builders))
 	mutators := make([]Mutator, len(tcb.builders))
@@ -203,8 +195,8 @@ func (tcb *TeamCreateBulk) Save(ctx context.Context) ([]*Team, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, tcb.builders[i+1].mutation)
 				} else {

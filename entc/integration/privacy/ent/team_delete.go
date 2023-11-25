@@ -31,7 +31,7 @@ func (td *TeamDelete) Where(ps ...predicate.Team) *TeamDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (td *TeamDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks[int, TeamMutation](ctx, td.sqlExec, td.mutation, td.hooks)
+	return withHooks(ctx, td.sqlExec, td.mutation, td.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -44,15 +44,7 @@ func (td *TeamDelete) ExecX(ctx context.Context) int {
 }
 
 func (td *TeamDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: team.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: team.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(team.Table, sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt))
 	if ps := td.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -73,6 +65,12 @@ type TeamDeleteOne struct {
 	td *TeamDelete
 }
 
+// Where appends a list predicates to the TeamDelete builder.
+func (tdo *TeamDeleteOne) Where(ps ...predicate.Team) *TeamDeleteOne {
+	tdo.td.mutation.Where(ps...)
+	return tdo
+}
+
 // Exec executes the deletion query.
 func (tdo *TeamDeleteOne) Exec(ctx context.Context) error {
 	n, err := tdo.td.Exec(ctx)
@@ -88,5 +86,7 @@ func (tdo *TeamDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (tdo *TeamDeleteOne) ExecX(ctx context.Context) {
-	tdo.td.ExecX(ctx)
+	if err := tdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -38,9 +38,25 @@ func (cu *CommentUpdate) SetText(s string) *CommentUpdate {
 	return cu
 }
 
+// SetNillableText sets the "text" field if the given value is not nil.
+func (cu *CommentUpdate) SetNillableText(s *string) *CommentUpdate {
+	if s != nil {
+		cu.SetText(*s)
+	}
+	return cu
+}
+
 // SetPostID sets the "post_id" field.
 func (cu *CommentUpdate) SetPostID(i int) *CommentUpdate {
 	cu.mutation.SetPostID(i)
+	return cu
+}
+
+// SetNillablePostID sets the "post_id" field if the given value is not nil.
+func (cu *CommentUpdate) SetNillablePostID(i *int) *CommentUpdate {
+	if i != nil {
+		cu.SetPostID(*i)
+	}
 	return cu
 }
 
@@ -62,7 +78,7 @@ func (cu *CommentUpdate) ClearPost() *CommentUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CommentUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks[int, CommentMutation](ctx, cu.sqlSave, cu.mutation, cu.hooks)
+	return withHooks(ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -99,16 +115,7 @@ func (cu *CommentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := cu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   comment.Table,
-			Columns: comment.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: comment.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(comment.Table, comment.Columns, sqlgraph.NewFieldSpec(comment.FieldID, field.TypeInt))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -127,10 +134,7 @@ func (cu *CommentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{comment.PostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: post.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -143,10 +147,7 @@ func (cu *CommentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{comment.PostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: post.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -180,9 +181,25 @@ func (cuo *CommentUpdateOne) SetText(s string) *CommentUpdateOne {
 	return cuo
 }
 
+// SetNillableText sets the "text" field if the given value is not nil.
+func (cuo *CommentUpdateOne) SetNillableText(s *string) *CommentUpdateOne {
+	if s != nil {
+		cuo.SetText(*s)
+	}
+	return cuo
+}
+
 // SetPostID sets the "post_id" field.
 func (cuo *CommentUpdateOne) SetPostID(i int) *CommentUpdateOne {
 	cuo.mutation.SetPostID(i)
+	return cuo
+}
+
+// SetNillablePostID sets the "post_id" field if the given value is not nil.
+func (cuo *CommentUpdateOne) SetNillablePostID(i *int) *CommentUpdateOne {
+	if i != nil {
+		cuo.SetPostID(*i)
+	}
 	return cuo
 }
 
@@ -202,6 +219,12 @@ func (cuo *CommentUpdateOne) ClearPost() *CommentUpdateOne {
 	return cuo
 }
 
+// Where appends a list predicates to the CommentUpdate builder.
+func (cuo *CommentUpdateOne) Where(ps ...predicate.Comment) *CommentUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *CommentUpdateOne) Select(field string, fields ...string) *CommentUpdateOne {
@@ -211,7 +234,7 @@ func (cuo *CommentUpdateOne) Select(field string, fields ...string) *CommentUpda
 
 // Save executes the query and returns the updated Comment entity.
 func (cuo *CommentUpdateOne) Save(ctx context.Context) (*Comment, error) {
-	return withHooks[*Comment, CommentMutation](ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
+	return withHooks(ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -248,16 +271,7 @@ func (cuo *CommentUpdateOne) sqlSave(ctx context.Context) (_node *Comment, err e
 	if err := cuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   comment.Table,
-			Columns: comment.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: comment.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(comment.Table, comment.Columns, sqlgraph.NewFieldSpec(comment.FieldID, field.TypeInt))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Comment.id" for update`)}
@@ -293,10 +307,7 @@ func (cuo *CommentUpdateOne) sqlSave(ctx context.Context) (_node *Comment, err e
 			Columns: []string{comment.PostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: post.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -309,10 +320,7 @@ func (cuo *CommentUpdateOne) sqlSave(ctx context.Context) (_node *Comment, err e
 			Columns: []string{comment.PostColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: post.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/examples/jsonencode/ent/card"
 )
@@ -20,7 +21,8 @@ type Card struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// Number holds the value of the "number" field.
-	Number string `json:"number,omitempty"`
+	Number       string `json:"number,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -33,7 +35,7 @@ func (*Card) scanValues(columns []string) ([]any, error) {
 		case card.FieldNumber:
 			values[i] = new(sql.NullString)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Card", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -59,16 +61,24 @@ func (c *Card) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				c.Number = value.String
 			}
+		default:
+			c.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the Card.
+// This includes values selected through modifiers, order, etc.
+func (c *Card) Value(name string) (ent.Value, error) {
+	return c.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this Card.
 // Note that you need to call Card.Unwrap() before calling this method if this Card
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (c *Card) Update() *CardUpdateOne {
-	return (&CardClient{config: c.config}).UpdateOne(c)
+	return NewCardClient(c.config).UpdateOne(c)
 }
 
 // Unwrap unwraps the Card entity that was returned from a transaction after it was closed,
@@ -95,9 +105,3 @@ func (c *Card) String() string {
 
 // Cards is a parsable slice of Card.
 type Cards []*Card
-
-func (c Cards) config(cfg config) {
-	for _i := range c {
-		c[_i].config = cfg
-	}
-}
